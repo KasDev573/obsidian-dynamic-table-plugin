@@ -65,10 +65,11 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
     <div className="dynamic-table-controls">
       {searchable && (
         <div className="searching">
-          <label>Search</label>
+          <label style={{ fontSize: '1.2em', fontWeight: 'bold' }}>Search</label>
           <div>
             <input
               type="text"
+              style={{ fontSize: '1.1em', padding: '0.4em' }}
               value={searching || ''}
               onChange={(evt) => setSearching(evt.target.value || null)}
             />
@@ -78,11 +79,15 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
 
       {Object.keys(filters).length > 0 && (
         <div className="filtering">
-          <label>Filter</label>
+          <label style={{ fontSize: '1.2em', fontWeight: 'bold' }}>Filter</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5em', flexWrap: 'wrap' }}>
-            <select onChange={handleFilterChange} value={NONE_SELECTED_SIGNAL}>
+            <select
+              onChange={handleFilterChange}
+              value={NONE_SELECTED_SIGNAL}
+              style={{ fontSize: '1.1em', padding: '0.4em' }}
+            >
               <option value={NONE_SELECTED_SIGNAL} disabled>
-                Select filter...
+
               </option>
 
               {Object.entries(filters).map(([group, options]) => (
@@ -112,7 +117,7 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
                     backgroundColor: 'var(--background-modifier-hover)',
                     border: '1px solid var(--background-modifier-border)',
                     borderRadius: '6px',
-                    fontSize: '0.85em',
+                    fontSize: '1.05em',
                     color: 'var(--text-normal)',
                   }}
                 >
