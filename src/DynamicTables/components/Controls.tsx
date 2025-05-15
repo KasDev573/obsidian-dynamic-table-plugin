@@ -7,7 +7,10 @@ import { EtConfiguration, EtDataColumn } from 'src/utils/types';
 
 const NONE_SELECTED_SIGNAL = '---';
 
-type FiltersConfiguration = [string, string][];
+type GroupedFiltersConfiguration = Record<
+  string,
+  [string, string][]
+>;
 
 type ControlsViewProps = {
   columns: EtDataColumn[];
@@ -26,10 +29,21 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
   searching,
   setSearching,
 }) => {
-  const filters = useMemo<FiltersConfiguration>(
-    () => [...Object.entries(configuration.filters ?? {})],
-    [configuration.filters],
-  );
+  const filters = useMemo<GroupedFiltersConfiguration>(() => {
+    const raw = configuration.filters ?? {};
+    const result: GroupedFiltersConfiguration = {};
+
+    for (const [groupOrLabel, value] of Object.entries(raw)) {
+      if (typeof value === 'object' && value !== null) {
+        result[groupOrLabel] = Object.entries(value as Record<string, string>);
+      } else {
+        if (!result['Filters']) result['Filters'] = [];
+        result['Filters'].push([groupOrLabel, value as string]);
+      }
+    }
+
+    return result;
+  }, [configuration.filters]);
 
   const searchable = useMemo(
     () => columns.some((c) => c.searchable),
@@ -62,7 +76,7 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
         </div>
       )}
 
-      {filters.length > 0 && (
+      {Object.keys(filters).length > 0 && (
         <div className="filtering">
           <label>Filter</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5em', flexWrap: 'wrap' }}>
@@ -70,15 +84,24 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
               <option value={NONE_SELECTED_SIGNAL} disabled>
                 Select filter...
               </option>
-              {filters.map(([label, value]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
+
+              {Object.entries(filters).map(([group, options]) => (
+                <optgroup key={group} label={group}>
+                  {options.map(([label, value]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
 
             {filtering.map((f, idx) => {
-              const label = filters.find(([, val]) => val === f)?.[0] ?? f;
+              const label =
+                Object.values(filters)
+                  .flat()
+                  .find(([, val]) => val === f)?.[0] ?? f;
+
               return (
                 <span
                   key={idx}

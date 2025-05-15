@@ -37,11 +37,14 @@ export const VALIDATION_JSON_SCHEMA = {
     },
     filters: {
       type: 'object',
-      propertyNames: {
-        pattern: '^.*$',
-      },
       additionalProperties: {
-        type: 'string',
+        anyOf: [
+          { type: 'string' },
+          {
+            type: 'object',
+            additionalProperties: { type: 'string' },
+          },
+        ],
       },
     },
     pagination: {
