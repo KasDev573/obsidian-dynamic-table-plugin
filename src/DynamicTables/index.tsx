@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { EtConfiguration, RawTableData } from 'src/utils/types';
-import { useEnhancedTablesState } from 'src/EnhancedTables/useEnhancedTablesState';
-import { PaginationView } from 'src/EnhancedTables/components/PaginationView';
-import { ControlsView } from 'src/EnhancedTables/components/Controls';
+import { useDynamicTablesState } from 'src/DynamicTables/useDynamicTablesState';
+import { PaginationView } from 'src/DynamicTables/components/PaginationView';
+import { ControlsView } from 'src/DynamicTables/components/Controls';
 import { App, MarkdownView } from 'obsidian';
 import { TableManager } from 'src/TableManager';
-import { makeEditor } from 'src/EnhancedTables/editors';
+import { makeEditor } from 'src/DynamicTables/editors';
 
 import * as css from 'css';
 
@@ -35,12 +35,9 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
     filtering,
     setFiltering,
 
-    // Removed sorting
-    // Removed setSorting
-
     searching,
     setSearching,
-  } = useEnhancedTablesState(
+  } = useDynamicTablesState(
     app,
     configuration,
     indexOfTheEnhancedTable,
@@ -111,7 +108,13 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
 
       tbodyRef.current!.appendChild(tr);
     });
-  }, [indexOfTheEnhancedTable, app.workspace, configuration, rows]);
+  }, [
+    indexOfTheEnhancedTable,
+    app.workspace,
+    configuration,
+    rows,
+    tableData.rowDirections, // ✅ Added to fix React warning
+  ]);
 
   const style = useMemo<string | undefined>(() => {
     if (!configuration.style) return undefined;

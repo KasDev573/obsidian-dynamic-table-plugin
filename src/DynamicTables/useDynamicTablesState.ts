@@ -28,11 +28,11 @@ import {
 import { extractValue } from 'src/utils/values';
 import { getSortingFunction } from 'src/utils/sorting';
 
-import { PaginationOptions } from 'src/EnhancedTables/components/PaginationView';
+import { PaginationOptions } from 'src/DynamicTables/components/PaginationView';
 import { App, MarkdownView } from 'obsidian';
 import { TableManager } from 'src/TableManager';
 
-export function useEnhancedTablesState(
+export function useDynamicTablesState(
   app: App,
   configuration: EtConfiguration,
   indexOfTheEnhancedTable: number,
@@ -185,7 +185,6 @@ export function useEnhancedTablesState(
       } as EtDataRow;
     });
 
-    // Sorting
     if (sorting) {
       const sortFn = getSortingFunction(sorting, indexedColumns);
 
@@ -201,18 +200,16 @@ export function useEnhancedTablesState(
         let matchesFilter = true;
         let matchesSearch = true;
 
-        // Apply filtering logic if filtering is active
         if (filtering.length > 0) {
           matchesFilter = filtering.every((expr) => {
             try {
-              return eval(expr);
+              return Function('$row', `return (${expr})`)($row);
             } catch {
               return false;
             }
           });
         }
 
-        // Apply searching logic if searching is active
         if (searching) {
           const lowercaseSearching = searching.toLocaleLowerCase();
           matchesSearch = $row.orderedCells
@@ -233,7 +230,6 @@ export function useEnhancedTablesState(
 
     setTotalNumberOfUnpaginatedRows(rows.length);
 
-    // Pagination
     if (pagination) {
       rows = rows.slice(
         pagination.pageSize! * (pagination.pageNumber! - 1),

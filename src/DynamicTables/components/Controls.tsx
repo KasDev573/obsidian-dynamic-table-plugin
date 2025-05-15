@@ -2,7 +2,6 @@ import React, {
   Dispatch,
   SetStateAction,
   useMemo,
-  useState,
 } from 'react';
 import { EtConfiguration, EtDataColumn } from 'src/utils/types';
 
@@ -28,9 +27,7 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
   setSearching,
 }) => {
   const filters = useMemo<FiltersConfiguration>(
-    () => [
-      ...Object.entries(configuration.filters ?? {}),
-    ],
+    () => [...Object.entries(configuration.filters ?? {})],
     [configuration.filters],
   );
 
@@ -73,44 +70,47 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
               <option value={NONE_SELECTED_SIGNAL} disabled>
                 Select filter...
               </option>
-              {filters.map(([text, value]) => (
-                <option key={text} value={value}>
-                  {text}
+              {filters.map(([label, value]) => (
+                <option key={value} value={value}>
+                  {label}
                 </option>
               ))}
             </select>
 
-            {filtering.map((f, idx) => (
-              <span
-                key={idx}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '0.2em 0.5em',
-                  backgroundColor: 'var(--background-modifier-hover)',
-                  border: '1px solid var(--background-modifier-border)',
-                  borderRadius: '6px',
-                  fontSize: '0.85em',
-                  color: 'var(--text-normal)',
-                }}
-              >
-                {filters.find(([_, val]) => val === f)?.[0] ?? f}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveFilter(f)}
+            {filtering.map((f, idx) => {
+              const label = filters.find(([, val]) => val === f)?.[0] ?? f;
+              return (
+                <span
+                  key={idx}
                   style={{
-                    marginLeft: '0.4em',
-                    border: 'none',
-                    background: 'none',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    color: 'inherit',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    padding: '0.2em 0.5em',
+                    backgroundColor: 'var(--background-modifier-hover)',
+                    border: '1px solid var(--background-modifier-border)',
+                    borderRadius: '6px',
+                    fontSize: '0.85em',
+                    color: 'var(--text-normal)',
                   }}
                 >
-                  ×
-                </button>
-              </span>
-            ))}
+                  {label}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFilter(f)}
+                    style={{
+                      marginLeft: '0.4em',
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      color: 'inherit',
+                    }}
+                  >
+                    ×
+                  </button>
+                </span>
+              );
+            })}
           </div>
         </div>
       )}

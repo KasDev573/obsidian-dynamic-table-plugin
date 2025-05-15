@@ -5,14 +5,19 @@ export function makeFormatterForColumn(
   formatter?: string,
 ): CellValueFormatter {
   if (formatter) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    return ($cell, $row, $ctx) => {
-      try {
-        return eval(formatter);
-      } catch (e) {
-        return $cell;
-      }
-    };
+    try {
+      const fn = new Function('$cell', '$row', '$ctx', `return ${formatter}`);
+      return (cell, row, ctx) => {
+        try {
+          return fn(cell, row, ctx);
+        } catch {
+          return cell;
+        }
+      };
+    } catch {
+      // fallback to raw value if formatting fails
+      return (cell) => cell;
+    }
   }
 
   switch (column.type) {
@@ -20,40 +25,36 @@ export function makeFormatterForColumn(
       return (val) => {
         try {
           return val.toLocaleString(undefined, column.numberFormat);
-        } catch (e) {
+        } catch {
           return val;
         }
       };
-      break;
     case 'bool':
       return (val) => {
         try {
           return val ? column.yesFormat : column.noFormat;
-        } catch (e) {
+        } catch {
           return val;
         }
       };
-      break;
     case 'date':
     case 'datetime':
     case 'time':
       return (val) => {
         try {
           return val.format(column.dateFormat);
-        } catch (e) {
+        } catch {
           return val;
         }
       };
-      break;
     case 'enum':
       return (val) => {
         try {
           return (column.enum ?? {})[val] ?? val;
-        } catch (e) {
+        } catch {
           return val;
         }
       };
-      break;
     default:
       return (val) => val;
   }
@@ -64,10 +65,9 @@ export function parseNumberFormat(
   defaultFormat: Record<string, any>,
 ): Record<string, any> {
   try {
-    return eval(`({
-      ${format}
-    })`);
-  } catch (e) {
+    const fn = new Function(`return ({${format}})`);
+    return fn();
+  } catch {
     return defaultFormat;
   }
 }

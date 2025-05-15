@@ -6,7 +6,7 @@ import {
   ET_YAML_SIGNAL,
 } from 'src/utils/sharedConstants';
 import { EtConfiguration, RawTableData } from 'src/utils/types';
-import { EnhancedTables } from 'src/EnhancedTables';
+import { EnhancedTables } from 'src/DynamicTables';
 import { createRoot } from 'react-dom/client';
 import React from 'react';
 import { validateConfiguration } from 'src/utils/validation';
