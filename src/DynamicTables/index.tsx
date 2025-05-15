@@ -3,17 +3,59 @@ import { EtConfiguration, RawTableData } from 'src/utils/types';
 import { useDynamicTablesState } from 'src/DynamicTables/useDynamicTablesState';
 import { PaginationView } from 'src/DynamicTables/components/PaginationView';
 import { ControlsView } from 'src/DynamicTables/components/Controls';
-import { App, MarkdownView } from 'obsidian';
+import { App, MarkdownView, FileSystemAdapter } from 'obsidian';
 import { TableManager } from 'src/TableManager';
 import { makeEditor } from 'src/DynamicTables/editors';
-
 import * as css from 'css';
+import fs from 'fs';
+import path from 'path';
 
 type EnhancedTablesProps = {
   app: App;
   configuration: EtConfiguration;
   tableData: RawTableData;
   indexOfTheEnhancedTable: number;
+};
+
+const getVaultBasePath = (app: App): string | null => {
+  const adapter = app.vault.adapter;
+  if (adapter instanceof FileSystemAdapter) {
+    return adapter.getBasePath();
+  }
+  return null;
+};
+
+const getStateFilePath = (app: App, fileName: string): string | null => {
+  const base = getVaultBasePath(app);
+  return base ? path.join(base, '.checkbox-states', `${fileName}.json`) : null;
+};
+
+const loadCheckboxStates = (app: App, fileName: string): Record<string, boolean> => {
+  try {
+    const filePath = getStateFilePath(app, fileName);
+    if (filePath && fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      return JSON.parse(raw);
+    }
+  } catch (e) {
+    console.error('Failed to load checkbox states', e);
+  }
+  return {};
+};
+
+const saveCheckboxStates = (app: App, fileName: string, states: Record<string, boolean>) => {
+  try {
+    const base = getVaultBasePath(app);
+    if (!base) return;
+
+    const dirPath = path.join(base, '.checkbox-states');
+    if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath);
+
+    const filePath = path.join(dirPath, `${fileName}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(states, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to save checkbox states', e);
+  }
 };
 
 export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
@@ -27,34 +69,28 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
   const {
     indexedColumns,
     rows,
-
     pagination,
     onChangePagination,
     totalNumberOfUnpaginatedRows,
-
     filtering,
     setFiltering,
-
     searching,
     setSearching,
-  } = useDynamicTablesState(
-    app,
-    configuration,
-    indexOfTheEnhancedTable,
-    tableData,
-  );
+  } = useDynamicTablesState(app, configuration, indexOfTheEnhancedTable, tableData);
 
   useEffect(() => {
     if (!tbodyRef.current) return;
 
     tbodyRef.current.textContent = '';
 
+    const fileName = app.workspace.getActiveFile()?.basename ?? 'default';
+    const checkboxStates = loadCheckboxStates(app, fileName);
+
     rows.forEach((row) => {
       const tr = document.createElement('tr');
       tr.setAttribute('data-dt-row', row.index.toString());
 
-      const currentContent =
-        app.workspace.getActiveViewOfType(MarkdownView)?.data ?? '';
+      const currentContent = app.workspace.getActiveViewOfType(MarkdownView)?.data ?? '';
       const tableManager = new TableManager();
 
       row.orderedCells
@@ -78,6 +114,17 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
             td.innerHTML = cell.formattedValue;
           }
 
+          const checkboxes = td.querySelectorAll<HTMLInputElement>('input[type="checkbox"][id]');
+          checkboxes.forEach((checkbox) => {
+            const id = checkbox.id;
+            checkbox.checked = checkboxStates[id] ?? checkbox.checked;
+
+            checkbox.addEventListener('change', () => {
+              checkboxStates[id] = checkbox.checked;
+              saveCheckboxStates(app, fileName, checkboxStates);
+            });
+          });
+
           const onValueChange = (newVal: string) => {
             const modifiedRowValues = row.orderedCells.map((c, i) =>
               i === idx2 ? newVal : c.rawValue,
@@ -89,13 +136,10 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
               indexOfTheEnhancedTable,
             );
 
-            app.workspace
-              //@ts-ignore
-              .getActiveFileView()
-              .setViewData(modifiedContent, true);
-
             //@ts-ignore
-            app.workspace.activeEditor.previewMode.rerender();
+            app.workspace.getActiveFileView().setViewData(modifiedContent, true);
+            //@ts-ignore
+            app.workspace.activeEditor?.previewMode?.rerender?.();
           };
 
           if (cell.column.editable) {
@@ -110,10 +154,11 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
     });
   }, [
     indexOfTheEnhancedTable,
+    app,
     app.workspace,
     configuration,
     rows,
-    tableData.rowDirections, // ✅ Added to fix React warning
+    tableData.rowDirections,
   ]);
 
   const style = useMemo<string | undefined>(() => {
