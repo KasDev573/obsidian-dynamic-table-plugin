@@ -10,6 +10,12 @@ import * as css from 'css';
 import fs from 'fs';
 import path from 'path';
 
+type CheckboxMeta = {
+  checked: boolean;
+  rowIndex: number;
+  column: string;
+};
+
 type EnhancedTablesProps = {
   app: App;
   configuration: EtConfiguration;
@@ -30,7 +36,7 @@ const getStateFilePath = (app: App, fileName: string): string | null => {
   return base ? path.join(base, '.checkbox-states', `${fileName}.json`) : null;
 };
 
-const loadCheckboxStates = (app: App, fileName: string): Record<string, boolean> => {
+const loadCheckboxStates = (app: App, fileName: string): Record<string, CheckboxMeta> => {
   try {
     const filePath = getStateFilePath(app, fileName);
     if (filePath && fs.existsSync(filePath)) {
@@ -43,7 +49,7 @@ const loadCheckboxStates = (app: App, fileName: string): Record<string, boolean>
   return {};
 };
 
-const saveCheckboxStates = (app: App, fileName: string, states: Record<string, boolean>) => {
+const saveCheckboxStates = (app: App, fileName: string, states: Record<string, CheckboxMeta>) => {
   try {
     const base = getVaultBasePath(app);
     if (!base) return;
@@ -117,10 +123,17 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
           const checkboxes = td.querySelectorAll<HTMLInputElement>('input[type="checkbox"][id]');
           checkboxes.forEach((checkbox) => {
             const id = checkbox.id;
-            checkbox.checked = checkboxStates[id] ?? checkbox.checked;
+            const saved = checkboxStates[id];
+            if (saved) {
+              checkbox.checked = saved.checked;
+            }
 
             checkbox.addEventListener('change', () => {
-              checkboxStates[id] = checkbox.checked;
+              checkboxStates[id] = {
+                checked: checkbox.checked,
+                rowIndex: row.index,
+                column: cell.column.alias || cell.column.name,
+              };
               saveCheckboxStates(app, fileName, checkboxStates);
             });
           });
