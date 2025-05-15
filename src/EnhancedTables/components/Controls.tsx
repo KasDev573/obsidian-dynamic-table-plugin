@@ -10,16 +10,12 @@ import { EtConfiguration, EtDataColumn } from 'src/utils/types';
 type FiltersConfiguration = [string, string][];
 
 const NONE_SELECTED_SIGNAL = '---';
-const ASC = 'asc';
-const DESC = 'desc';
 
 type ControlsViewProps = {
   columns: EtDataColumn[];
   configuration: EtConfiguration;
   filtering: string | null;
   setFiltering: Dispatch<SetStateAction<string | null>>;
-  sorting: string | null;
-  setSorting: Dispatch<SetStateAction<string | null>>;
   searching: string | null;
   setSearching: Dispatch<SetStateAction<string | null>>;
 };
@@ -29,18 +25,9 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
   configuration,
   filtering,
   setFiltering,
-  sorting,
-  setSorting,
   searching,
   setSearching,
 }) => {
-  const [sortOrder, setSortOrder] = useState<string>(
-    (sorting ?? '').startsWith('-') ? DESC : ASC,
-  );
-  const [innerSorting, setInnerSorting] = useState<string>(
-    sorting ? sorting.replace(/^-/, '') : NONE_SELECTED_SIGNAL,
-  );
-
   const filters = useMemo<FiltersConfiguration>(
     () =>
       [
@@ -59,38 +46,20 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
     [columns],
   );
 
-  useEffect(() => {
-    if (innerSorting === NONE_SELECTED_SIGNAL) {
-      setSorting(null);
-    }
-    setSorting(`${sortOrder === DESC ? '-' : ''}${innerSorting}`);
-  }, [innerSorting, setSorting, sortOrder]);
-
   return (
     <div className="dynamic-table-controls">
-      <div className="sorting">
-        <label>Sort</label>
-        <div>
-          <select
-            value={innerSorting}
-            onChange={(evt) => setInnerSorting(evt.target.value)}
-          >
-            <option value={NONE_SELECTED_SIGNAL}>{NONE_SELECTED_SIGNAL}</option>
-            {(columns ?? []).map((c) => (
-              <option key={c.alias} value={c.alias}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={sortOrder}
-            onChange={(evt) => setSortOrder(evt.target.value)}
-          >
-            <option value={ASC}>ASC</option>
-            <option value={DESC}>DESC</option>
-          </select>
+      {searchable && (
+        <div className="searching">
+          <label>Search</label>
+          <div>
+            <input
+              type="text"
+              value={searching || ''}
+              onChange={(evt) => setSearching(evt.target.value || null)}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {filters.length > 0 && (
         <div className="filtering">
@@ -112,19 +81,6 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
                 </option>
               ))}
             </select>
-          </div>
-        </div>
-      )}
-
-      {searchable && (
-        <div className="searching">
-          <label>Search</label>
-          <div>
-            <input
-              type="text"
-              value={searching || ''}
-              onChange={(evt) => setSearching(evt.target.value || null)}
-            />
           </div>
         </div>
       )}

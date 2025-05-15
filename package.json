@@ -1,5 +1,5 @@
 {
-  "name": "enhanced-tables",
+  "name": "dynamic-table-plugin",
   "version": "1.0.5",
   "description": "Add programmable controls to selected tables",
   "main": "main.js",
@@ -9,7 +9,7 @@
     "version": "node version-bump.mjs && git add manifest.json versions.json"
   },
   "keywords": [],
-  "author": "pistacchio",
+  "author": "KasDev573",
   "license": "MIT",
   "devDependencies": {
     "@types/css": "^0.0.37",

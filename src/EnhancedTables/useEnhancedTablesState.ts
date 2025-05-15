@@ -198,40 +198,36 @@ export function useEnhancedTablesState(
       }
     }
 
-    // Combined Filtering + Searching
     if (filtering || searching) {
-      rows = rows.filter((row) => {
-        let passesFilter = true;
-        let passesSearch = true;
+      rows = rows.filter(($row) => {
+        let matchesFilter = true;
+        let matchesSearch = true;
 
-        // Evaluate the filter if it exists
+        // Apply filtering logic if filtering is active
         if (filtering) {
-          try {
-            // NOTE: This is still using eval — be cautious if filters become user-defined
-            passesFilter = eval(filtering);
-          } catch (e) {
-            passesFilter = false;
-          }
+          const tagFilter = filtering.replace(/===/g, ".includes");
+          matchesFilter = eval(tagFilter);
         }
 
-        // Evaluate the search if it exists
+        // Apply searching logic if searching is active
         if (searching) {
-          try {
-            const lowercaseSearching = searching.toLocaleLowerCase();
-            passesSearch = row.orderedCells
-              .filter((c) => c.column.searchable)
-              .some((c) =>
-                c.value.toLocaleLowerCase().includes(lowercaseSearching),
-              );
-          } catch (e) {
-            passesSearch = false;
-          }
+          const lowercaseSearching = searching.toLocaleLowerCase();
+          matchesSearch = $row.orderedCells
+            .filter((c) => c.column.searchable)
+            .some((c) => {
+              if (Array.isArray(c.value)) {
+                return c.value.some((tag) =>
+                  tag.toLocaleLowerCase().includes(lowercaseSearching),
+                );
+              }
+              return c.value.toLocaleLowerCase().includes(lowercaseSearching);
+            });
         }
 
-        // Only include rows that pass both
-        return passesFilter && passesSearch;
+        return matchesFilter && matchesSearch; // Ensures both conditions apply
       });
     }
+
 
 
     setTotalNumberOfUnpaginatedRows(rows.length);

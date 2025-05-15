@@ -35,8 +35,8 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
     filtering,
     setFiltering,
 
-    sorting,
-    setSorting,
+    // Removed sorting
+    // Removed setSorting
 
     searching,
     setSearching,
@@ -142,8 +142,6 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
           columns={indexedColumns}
           filtering={filtering}
           setFiltering={setFiltering}
-          sorting={sorting}
-          setSorting={setSorting}
           searching={searching}
           setSearching={setSearching}
         />
