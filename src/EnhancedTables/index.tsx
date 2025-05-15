@@ -47,18 +47,14 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
     tableData,
   );
 
-  // Escape from React logic in order to be abel to use `HTMLElement.appendChild()` and
-  // hence handle advanced formatters that return HTML elements
   useEffect(() => {
-    if (!tbodyRef.current) {
-      return;
-    }
+    if (!tbodyRef.current) return;
 
-    tbodyRef.current!.textContent = '';
+    tbodyRef.current.textContent = '';
 
     rows.forEach((row) => {
       const tr = document.createElement('tr');
-      tr.setAttribute('data-et-row', row.index.toString());
+      tr.setAttribute('data-dt-row', row.index.toString());
 
       const currentContent =
         app.workspace.getActiveViewOfType(MarkdownView)?.data ?? '';
@@ -68,25 +64,23 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
         .filter((c) => !c.column.hidden)
         .forEach((cell, idx2) => {
           const td = document.createElement('td');
-          td.setAttribute('data-et-cell', idx2.toString());
-          td.setAttribute('data-et-row-cell', `${row.index}-${idx2}`);
+          td.setAttribute('data-dt-cell', idx2.toString());
+          td.setAttribute('data-dt-row-cell', `${row.index}-${idx2}`);
 
           if (tableData.rowDirections[idx2] !== null) {
             td.setAttribute('align', tableData.rowDirections[idx2] as string);
           }
 
           if (cell.column.nowrap) {
-            td.className = 'enhanced-tables-nowrap';
+            td.className = 'dynamic-table-nowrap';
           }
 
-          // If the formatter function returns a HTML element, use it as-is
           try {
             td.appendChild(cell.formattedValue);
           } catch (e) {
             td.innerHTML = cell.formattedValue;
           }
 
-          // Editing. Activate it on click
           const onValueChange = (newVal: string) => {
             const modifiedRowValues = row.orderedCells.map((c, i) =>
               i === idx2 ? newVal : c.rawValue,
@@ -98,13 +92,12 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
               indexOfTheEnhancedTable,
             );
 
-            // Set the modified data
             app.workspace
-              // @ts-ignore
+              //@ts-ignore
               .getActiveFileView()
               .setViewData(modifiedContent, true);
 
-            // @ts-ignore
+            //@ts-ignore
             app.workspace.activeEditor.previewMode.rerender();
           };
 
@@ -120,12 +113,8 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
     });
   }, [indexOfTheEnhancedTable, app.workspace, configuration, rows]);
 
-  // If the user defined a custom make, try to make it scoped to the class
-  // enhanced-tables
   const style = useMemo<string | undefined>(() => {
-    if (!configuration.style) {
-      return undefined;
-    }
+    if (!configuration.style) return undefined;
 
     try {
       const customCss = css.parse(configuration.style);
@@ -134,7 +123,7 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
       });
 
       return `
-        .enhanced-tables {
+        .dynamic-table {
           ${css.stringify(customCss)}
         }
       `;
@@ -144,7 +133,7 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
   }, [configuration.style]);
 
   return (
-    <div className="enhanced-tables">
+    <div className="dynamic-table">
       {style && <style>{style}</style>}
 
       {!configuration['hide-controls'] && (
@@ -169,7 +158,7 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
                 .map((c, idx) => (
                   <th
                     key={idx}
-                    className={`${c.nowrap ? 'enhanced-tables-nowrap' : ''} ${configuration['fix-header'] ? 'enhanced-tables-fix-header' : ''}`}
+                    className={`${c.nowrap ? 'dynamic-table-nowrap' : ''} ${configuration['fix-header'] ? 'dynamic-table-fix-header' : ''}`}
                     dangerouslySetInnerHTML={{ __html: c.name }}
                   />
                 ))}

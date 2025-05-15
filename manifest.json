@@ -1,10 +1,11 @@
 {
-  "id": "enhanced-tables",
-  "name": "Enhanced tables",
-  "version": "1.0.5",
+  "id": "obsidian-dynamic-table-plugin",
+  "name": "Dynamic Table Plugin",
+  "version": "0.1.0",
   "minAppVersion": "0.15.0",
-  "description": "Add programmable controls to selected tables",
-  "author": "pistacchio",
-  "authorUrl": "https://github.com/pistacchio",
+  "description": "A customizable table enhancement plugin for Obsidian with YAML filters and searchable data.",
+  "author": "KasDev573",
+  "authorUrl": "https://github.com/KasDev573",
+  "main": "main.js",
   "isDesktopOnly": false
 }

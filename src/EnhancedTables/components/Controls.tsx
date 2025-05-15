@@ -67,7 +67,7 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
   }, [innerSorting, setSorting, sortOrder]);
 
   return (
-    <div className="enhanced-tables-controls">
+    <div className="dynamic-table-controls">
       <div className="sorting">
         <label>Sort</label>
         <div>

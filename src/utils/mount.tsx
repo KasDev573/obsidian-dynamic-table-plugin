@@ -23,46 +23,30 @@ export async function getMountContext(
   element: HTMLElement,
   ctx: MarkdownPostProcessorContext,
 ): Promise<MountContext | null | string> {
-  // The timeout is necessary to give Obsidian time to render the whole page
-  // or else it would be impossible to find the table (since that would not
-  // have been rendered yet(
   return new Promise((resolve) => {
     setTimeout(() => {
       let yamlCodeEl = element.find('code.language-yaml');
       let tableEl = element.find('table') as HTMLTableElement;
 
-      // Neither a <code> or a <table> element. No need to continue
       if (!yamlCodeEl && !tableEl) {
         return resolve(null);
       }
 
-      // Since the plugin can be triggered from either changes to the table or
-      // changes to the yaml code, make sure that the yaml code configuration has
-      // a table after it or that the table has a yaml code before it
       if (yamlCodeEl && !tableEl) {
         const tableElement = lookDownForTheTable(element);
-
-        if (tableElement) {
-          tableEl = tableElement;
-        }
+        if (tableElement) tableEl = tableElement;
       }
 
       if (tableEl && !yamlCodeEl) {
         const yamlCodeElement = lookUpForTheYamlCode(element);
-        if (yamlCodeElement) {
-          yamlCodeEl = yamlCodeElement;
-        }
+        if (yamlCodeElement) yamlCodeEl = yamlCodeElement;
       }
 
-      // <code> not followed by <table> or a <table> not preceded by <code>
       if (!tableEl || !yamlCodeEl) {
         return resolve(null);
       }
 
-      const configurationString = extractYamlCodeFromTheCodeBlock(
-        yamlCodeEl,
-        ctx,
-      );
+      const configurationString = extractYamlCodeFromTheCodeBlock(yamlCodeEl, ctx);
 
       if (!configurationString) {
         return resolve(null);
@@ -76,17 +60,13 @@ export async function getMountContext(
       }
 
       const validOrValidationMessage = validateConfiguration(configuration);
-
       if (validOrValidationMessage !== true) {
         return resolve(validOrValidationMessage);
       }
 
       const tableData = extractRawTableData(tableEl);
-
       yamlCodeEl.setAttribute(ET_CONFIGURATION_CODE_EL_ATTRIBUTE, '1');
 
-      // If there are multiple Enhanced Tables declared in the page, found out if this
-      // is the first one, the second one and so on.
       const indexOfTheEnhancedTable = Array.from(
         document.querySelectorAll(`[${ET_CONFIGURATION_CODE_EL_ATTRIBUTE}]`),
       ).indexOf(yamlCodeEl);
@@ -123,7 +103,7 @@ export function mountEnhancedTables(
     indexOfTheEnhancedTable.toString(),
   );
   tableEl.after(rootElement);
-  tableEl.className = 'enhanced-tables-hidden';
+  tableEl.className = 'dynamic-table-hidden'; // 🟢 Renamed from 'enhanced-tables-hidden'
 
   if (configuration['hide-configuration']) {
     yamlCodeEl.parentElement?.remove();
@@ -231,9 +211,6 @@ function extractRawTableData(element: HTMLTableElement): RawTableData {
         .map((cell: HTMLTableCellElement) => cell.innerHTML);
     },
   );
-
-  // Extract the alignment information from the source table in order to be able to
-  // apply it in the enhanced one
 
   let rowDirections: (string | null)[] = Array.from(columns, () => null);
 

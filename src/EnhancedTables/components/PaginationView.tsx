@@ -41,13 +41,10 @@ export const PaginationView: React.FC<PaginationViewProps> = ({
     const numberOfPages = Math.ceil(totalNumberOfItems / pageSize);
     setTotalNumberOfPages(numberOfPages);
 
-    // Display all the pages if no "max pages" is used or there are less pages
-    // than the ones specified by "max pages"
     if (numberOfPages <= DEFAULT_MAX_BUTTONS) {
       return Array.from({ length: numberOfPages }, (_, idx) => idx + 1);
     }
 
-    // Compute the array of the pages to render before the current one
     const firstPageBeforeTheCurrentOne = Math.max(
       1,
       Math.min(
@@ -60,7 +57,6 @@ export const PaginationView: React.FC<PaginationViewProps> = ({
       (_, idx) => firstPageBeforeTheCurrentOne + idx,
     );
 
-    // Compute the array of the pages to render after the current one
     const lastPageAfterTheCurrentOne = Math.min(
       numberOfPages,
       Math.max(
@@ -90,7 +86,6 @@ export const PaginationView: React.FC<PaginationViewProps> = ({
     [onChange, pageSize],
   );
 
-  // Reflect internally any change to the external pagination
   useEffect(() => {
     if (value) {
       if (value.pageNumber) {
@@ -105,7 +100,7 @@ export const PaginationView: React.FC<PaginationViewProps> = ({
 
   return (
     <Fragment>
-      <div className="enhanced-tables-pagination">
+      <div className="dynamic-table-pagination">
         <div className="d-flex flex-wrap py-2 mr-3 ">
           {totalNumberOfItems > pageSize && (
             <Fragment>

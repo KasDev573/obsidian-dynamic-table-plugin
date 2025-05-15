@@ -1,13 +1,4 @@
-/*
-
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
-*/
-
-.enhanced-tables {
+.dynamic-table {
   & .table-container {
     width: 100%;
     overflow-x: scroll;
@@ -21,11 +12,11 @@ If your plugin does not need CSS, delete this file.
   }
 
   & .editor-container {
-    display : flex;
-    align-items : center;
-    align-content : center;
-    justify-content : center;
-    justify-items : center;
+    display: flex;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+    justify-items: center;
   }
 
   & .editor-mr-5 {
@@ -41,7 +32,7 @@ If your plugin does not need CSS, delete this file.
   }
 }
 
-.enhanced-tables-pagination {
+.dynamic-table-pagination {
   display: flex;
   justify-content: space-between;
 
@@ -69,7 +60,7 @@ If your plugin does not need CSS, delete this file.
   }
 }
 
-.enhanced-tables-controls {
+.dynamic-table-controls {
   display: flex;
 
   & > div {
@@ -88,36 +79,34 @@ If your plugin does not need CSS, delete this file.
   }
 }
 
-.enhanced-tables-nowrap {
+.dynamic-table-nowrap {
   white-space: nowrap !important;
 }
 
-.enhanced-tables-fix-header {
+.dynamic-table-fix-header {
   position: sticky;
   top: 0;
 }
 
-.enhanced-tables-hidden {
+.dynamic-table-hidden {
   display: none;
 }
 
-
-.enhanced-tables-error {
+.dynamic-table-error {
   color: var(--text-error);
 }
 
-.enhanced-tables-errors {
+.dynamic-table-errors {
   margin-bottom: 1.5em;
 }
 
-
 @media (max-width: 700px) {
-  .enhanced-tables-controls {
+  .dynamic-table-controls {
     flex-direction: column;
     margin-bottom: 1em;
   }
 
-  .enhanced-tables-pagination {
+  .dynamic-table-pagination {
     margin-top: 1em;
 
     & .pag-nav-dots,
@@ -126,7 +115,5 @@ If your plugin does not need CSS, delete this file.
     & select {
       display: none;
     }
-
   }
-
 }

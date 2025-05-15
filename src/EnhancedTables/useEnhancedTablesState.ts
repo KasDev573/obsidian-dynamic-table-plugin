@@ -198,30 +198,41 @@ export function useEnhancedTablesState(
       }
     }
 
-    // Filtering
-    if (filtering && !searching) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const $data = tableData;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      rows = rows.filter(($row) => eval(filtering));
-    }
+    // Combined Filtering + Searching
+    if (filtering || searching) {
+      rows = rows.filter((row) => {
+        let passesFilter = true;
+        let passesSearch = true;
 
-    // Searching
-    if (searching) {
-      const lowercaseSearching = searching.toLocaleLowerCase();
-
-      rows = rows.filter((r) => {
-        try {
-          return r.orderedCells
-            .filter((c) => c.column.searchable)
-            .some((c) =>
-              c.value.toLocaleLowerCase().includes(lowercaseSearching),
-            );
-        } catch (e) {
-          return false;
+        // Evaluate the filter if it exists
+        if (filtering) {
+          try {
+            // NOTE: This is still using eval — be cautious if filters become user-defined
+            passesFilter = eval(filtering);
+          } catch (e) {
+            passesFilter = false;
+          }
         }
+
+        // Evaluate the search if it exists
+        if (searching) {
+          try {
+            const lowercaseSearching = searching.toLocaleLowerCase();
+            passesSearch = row.orderedCells
+              .filter((c) => c.column.searchable)
+              .some((c) =>
+                c.value.toLocaleLowerCase().includes(lowercaseSearching),
+              );
+          } catch (e) {
+            passesSearch = false;
+          }
+        }
+
+        // Only include rows that pass both
+        return passesFilter && passesSearch;
       });
     }
+
 
     setTotalNumberOfUnpaginatedRows(rows.length);
 
