@@ -1,21 +1,20 @@
 import React, {
   Dispatch,
   SetStateAction,
-  useEffect,
   useMemo,
   useState,
 } from 'react';
 import { EtConfiguration, EtDataColumn } from 'src/utils/types';
 
-type FiltersConfiguration = [string, string][];
-
 const NONE_SELECTED_SIGNAL = '---';
+
+type FiltersConfiguration = [string, string][];
 
 type ControlsViewProps = {
   columns: EtDataColumn[];
   configuration: EtConfiguration;
-  filtering: string | null;
-  setFiltering: Dispatch<SetStateAction<string | null>>;
+  filtering: string[];
+  setFiltering: Dispatch<SetStateAction<string[]>>;
   searching: string | null;
   setSearching: Dispatch<SetStateAction<string | null>>;
 };
@@ -29,22 +28,27 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
   setSearching,
 }) => {
   const filters = useMemo<FiltersConfiguration>(
-    () =>
-      [
-        ...(configuration.filter ||
-        Object.keys(configuration.filters ?? {}).length > 0
-          ? [[NONE_SELECTED_SIGNAL, NONE_SELECTED_SIGNAL]]
-          : []),
-        ...(configuration.filter ? [['DEFAULT', configuration.filter]] : []),
-        ...Object.entries(configuration.filters ?? {}),
-      ] as FiltersConfiguration,
-    [configuration.filter, configuration.filters],
+    () => [
+      ...Object.entries(configuration.filters ?? {}),
+    ],
+    [configuration.filters],
   );
 
-  const searchable = useMemo<boolean>(
+  const searchable = useMemo(
     () => columns.some((c) => c.searchable),
     [columns],
   );
+
+  const handleFilterChange = (evt: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = evt.target.value;
+    if (!filtering.includes(value)) {
+      setFiltering([...filtering, value]);
+    }
+  };
+
+  const handleRemoveFilter = (value: string) => {
+    setFiltering(filtering.filter((f) => f !== value));
+  };
 
   return (
     <div className="dynamic-table-controls">
@@ -64,23 +68,49 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
       {filters.length > 0 && (
         <div className="filtering">
           <label>Filter</label>
-          <div>
-            <select
-              value={filtering ?? NONE_SELECTED_SIGNAL}
-              onChange={(evt) =>
-                setFiltering(
-                  evt.target.value === NONE_SELECTED_SIGNAL
-                    ? null
-                    : evt.target.value,
-                )
-              }
-            >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5em', flexWrap: 'wrap' }}>
+            <select onChange={handleFilterChange} value={NONE_SELECTED_SIGNAL}>
+              <option value={NONE_SELECTED_SIGNAL} disabled>
+                Select filter...
+              </option>
               {filters.map(([text, value]) => (
                 <option key={text} value={value}>
                   {text}
                 </option>
               ))}
             </select>
+
+            {filtering.map((f, idx) => (
+              <span
+                key={idx}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '0.2em 0.5em',
+                  backgroundColor: 'var(--background-modifier-hover)',
+                  border: '1px solid var(--background-modifier-border)',
+                  borderRadius: '6px',
+                  fontSize: '0.85em',
+                  color: 'var(--text-normal)',
+                }}
+              >
+                {filters.find(([_, val]) => val === f)?.[0] ?? f}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveFilter(f)}
+                  style={{
+                    marginLeft: '0.4em',
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    color: 'inherit',
+                  }}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
           </div>
         </div>
       )}

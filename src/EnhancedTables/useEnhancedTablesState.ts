@@ -41,9 +41,7 @@ export function useEnhancedTablesState(
   const [sorting, setSorting] = useState<string | null>(
     configuration.sort ?? null,
   );
-  const [filtering, setFiltering] = useState<string | null>(
-    configuration.filter ?? null,
-  );
+  const [filtering, setFiltering] = useState<string[]>([]);
   const [searching, setSearching] = useState<string | null>(null);
 
   const [pagination, setPagination] = useState<Pagination | null>(() => {
@@ -52,7 +50,7 @@ export function useEnhancedTablesState(
         configuration.pagination['page-size'] ?? DEFAULT_PAGE_SIZE;
       const pageSizes =
         configuration.pagination['page-sizes'] ?? DEFAULT_PAGES_SIZE_OPTIONS;
-      if (!pageSizes.contains(pageSize)) {
+      if (!pageSizes.includes(pageSize)) {
         pageSizes.push(pageSize);
         pageSizes.sort();
       }
@@ -198,15 +196,20 @@ export function useEnhancedTablesState(
       }
     }
 
-    if (filtering || searching) {
+    if (filtering.length > 0 || searching) {
       rows = rows.filter(($row) => {
         let matchesFilter = true;
         let matchesSearch = true;
 
         // Apply filtering logic if filtering is active
-        if (filtering) {
-          const tagFilter = filtering.replace(/===/g, ".includes");
-          matchesFilter = eval(tagFilter);
+        if (filtering.length > 0) {
+          matchesFilter = filtering.every((expr) => {
+            try {
+              return eval(expr);
+            } catch {
+              return false;
+            }
+          });
         }
 
         // Apply searching logic if searching is active
@@ -224,11 +227,9 @@ export function useEnhancedTablesState(
             });
         }
 
-        return matchesFilter && matchesSearch; // Ensures both conditions apply
+        return matchesFilter && matchesSearch;
       });
     }
-
-
 
     setTotalNumberOfUnpaginatedRows(rows.length);
 
