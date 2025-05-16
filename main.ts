@@ -37,12 +37,12 @@ export default class DynamicTablePlugin extends Plugin {
 
         errorsContainer.createDiv({
           text: `⚠️ Validation errors:`,
-          cls: 'enhanced-tables-error',
+          cls: 'dynamic-tables-error',
         });
 
         errorsContainer.createDiv({
           text: `- ${possibleMountContext}`,
-          cls: 'enhanced-tables-error',
+          cls: 'dynamic-tables-error',
         });
 
         return;
