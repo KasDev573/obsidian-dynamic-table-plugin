@@ -129,7 +129,10 @@ export function useDynamicTablesState(
     const rawTableLines = tableManager.readTableLines(currentContent, indexOfTheEnhancedTable);
 
     const fileName = app.workspace.getActiveFile()?.basename ?? 'default';
+    const adapter = app.vault.adapter as FileSystemAdapter;
+    const filePath = path.join(adapter.getBasePath(), '_checkbox-states', `${fileName}.json`);
     const checkboxStates = loadCheckboxStates(app, fileName);
+    let updated = false;
 
     let result: EtDataRow[] = tableData.rows.map((cells, rowIdx) => {
       const orderedCells: EtDataCell[] = cells.map((cellContent, cellIdx) => {
@@ -141,8 +144,24 @@ export function useDynamicTablesState(
 
         const value = extractValue(cellContent, column, format, yesFormat);
 
-        // Preserve the original HTML checkbox input element (not boolean)
         const raw = rawTableLines?.[rowIdx + 2]?.[cellIdx] ?? '';
+
+        // Check for checkbox input
+        const isCheckbox = raw.includes('type="checkbox"');
+        if (isCheckbox) {
+          const match = raw.match(/id="([^"]+)"/);
+          const checkboxId = match?.[1];
+          const isChecked = raw.includes('checked');
+
+          if (checkboxId && !checkboxStates[checkboxId]) {
+            checkboxStates[checkboxId] = {
+              rowIndex: rowIdx,
+              column: column.name,
+              checked: isChecked,
+            };
+            updated = true;
+          }
+        }
 
         return {
           column,
@@ -157,11 +176,10 @@ export function useDynamicTablesState(
       });
 
       const allCells = Object.fromEntries(
-        orderedCells.map((c) => [c.column.alias, c.value])
+        orderedCells.map((c) => [c.column.alias ?? c.column.name, c.value])
       );
 
-      // Inject 'true' into the same column as the checkbox if checked
-      // Inject 'false' into the same column as the checkbox if unchecked
+      // Inject 'true' or 'false' based on checkboxStates
       Object.values(checkboxStates).forEach((meta) => {
         if (meta.rowIndex === rowIdx) {
           const colName = meta.column;
@@ -179,7 +197,6 @@ export function useDynamicTablesState(
         }
       });
 
-
       const enrichedCells = orderedCells.map((c) => ({
         ...c,
         value: allCells[c.column.alias ?? c.column.name],
@@ -192,6 +209,15 @@ export function useDynamicTablesState(
         ...allCells,
       } as EtDataRow;
     });
+
+    // Write updated checkboxStates if needed
+    if (updated && filePath) {
+      try {
+        fs.writeFileSync(filePath, JSON.stringify(checkboxStates, null, 2));
+      } catch (e) {
+        console.error('Failed to write updated checkbox state file', e);
+      }
+    }
 
     // Sorting
     if (sorting) {
