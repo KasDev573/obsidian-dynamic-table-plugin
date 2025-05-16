@@ -33,10 +33,17 @@ export type EtConfiguration = {
   filters?: Record<string, string>;
   sort?: string;
   pagination?: EtConfigurationPagination;
-  'hide-controls': boolean;
-  'hide-configuration': boolean;
+  'hide-controls'?: boolean;
+  'hide-configuration'?: boolean;
   style?: string;
   'fix-header'?: boolean;
+
+  // Section to show/hide UI elements from YAML
+  controls?: {
+    showSort?: boolean;
+    showSearch?: boolean;
+    showFilter?: boolean;
+  };
 };
 
 export type EtConfigurationColumn = {

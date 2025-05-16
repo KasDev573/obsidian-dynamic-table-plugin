@@ -21,6 +21,9 @@ type EnhancedTablesProps = {
   configuration: EtConfiguration;
   tableData: RawTableData;
   indexOfTheEnhancedTable: number;
+  showSort: boolean;   // added
+  showSearch: boolean; // added
+  showFilter: boolean; // added
 };
 
 const getVaultBasePath = (app: App): string | null => {
@@ -69,6 +72,9 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
   configuration,
   tableData,
   indexOfTheEnhancedTable,
+  showSort,
+  showSearch,
+  showFilter,
 }) => {
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
@@ -209,6 +215,9 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
           setSorting={setSorting}
           searching={searching}
           setSearching={setSearching}
+          showSort={showSort}
+          showSearch={showSearch}
+          showFilter={showFilter}
         />
       )}
 

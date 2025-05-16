@@ -103,11 +103,16 @@ export function mountEnhancedTables(
     indexOfTheEnhancedTable.toString(),
   );
   tableEl.after(rootElement);
-  tableEl.className = 'dynamic-table-hidden'; // 🟢 Renamed from 'enhanced-tables-hidden'
+  tableEl.className = 'dynamic-table-hidden'; // Hide original table
 
   if (configuration['hide-configuration']) {
     yamlCodeEl.parentElement?.remove();
   }
+
+  // Extract control flags from configuration.controls with defaults
+  const showSort = configuration.controls?.showSort ?? true;
+  const showSearch = configuration.controls?.showSearch ?? true;
+  const showFilter = configuration.controls?.showFilter ?? true;
 
   createRoot(rootElement).render(
     <EnhancedTables
@@ -115,6 +120,9 @@ export function mountEnhancedTables(
       configuration={configuration}
       tableData={tableData}
       indexOfTheEnhancedTable={indexOfTheEnhancedTable}
+      showSort={showSort}
+      showSearch={showSearch}
+      showFilter={showFilter}
     />,
   );
 }

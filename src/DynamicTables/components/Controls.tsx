@@ -22,6 +22,9 @@ type ControlsViewProps = {
   setSorting: Dispatch<SetStateAction<string | null>>;
   searching: string | null;
   setSearching: Dispatch<SetStateAction<string | null>>;
+  showSort: boolean;
+  showSearch: boolean;
+  showFilter: boolean;
 };
 
 export const ControlsView: React.FC<ControlsViewProps> = ({
@@ -33,6 +36,9 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
   setSorting,
   searching,
   setSearching,
+  showSort,
+  showSearch,
+  showFilter,
 }) => {
   const filters = useMemo<GroupedFiltersConfiguration>(() => {
     const raw = configuration.filters ?? {};
@@ -93,45 +99,47 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
       }}
     >
       {/* Sort Section */}
-      <div className="sorting" style={{ display: 'flex', flexDirection: 'column' }}>
-        <label style={{ fontSize: '1.1em', fontWeight: 'bold', marginBottom: '0.3em' }}>Sort</label>
-        <div style={{ display: 'flex', gap: '0.5em' }}>
-          <select
-            value={innerSorting}
-            onChange={(evt) => setInnerSorting(evt.target.value)}
-            style={{
-              fontSize: '1em',
-              padding: '0.3em',
-              minWidth: '180px',
-              minHeight: '2.2em',
-            }}
-          >
-            <option value={NONE_SELECTED_SIGNAL}>{NONE_SELECTED_SIGNAL}</option>
-            {columns.map((c) => (
-              <option key={c.alias} value={c.alias}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+      {showSort && (
+        <div className="sorting" style={{ display: 'flex', flexDirection: 'column' }}>
+          <label style={{ fontSize: '1.1em', fontWeight: 'bold', marginBottom: '0.3em' }}>Sort</label>
+          <div style={{ display: 'flex', gap: '0.5em' }}>
+            <select
+              value={innerSorting}
+              onChange={(evt) => setInnerSorting(evt.target.value)}
+              style={{
+                fontSize: '1em',
+                padding: '0.3em',
+                minWidth: '180px',
+                minHeight: '2.2em',
+              }}
+            >
+              <option value={NONE_SELECTED_SIGNAL}>{NONE_SELECTED_SIGNAL}</option>
+              {columns.map((c) => (
+                <option key={c.alias} value={c.alias}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
 
-          <select
-            value={sortOrder}
-            onChange={(evt) => setSortOrder(evt.target.value)}
-            style={{
-              fontSize: '1em',
-              padding: '0.3em',
-              minWidth: '100px',
-              minHeight: '2.2em',
-            }}
-          >
-            <option value={ASC}>ASC</option>
-            <option value={DESC}>DESC</option>
-          </select>
+            <select
+              value={sortOrder}
+              onChange={(evt) => setSortOrder(evt.target.value)}
+              style={{
+                fontSize: '1em',
+                padding: '0.3em',
+                minWidth: '100px',
+                minHeight: '2.2em',
+              }}
+            >
+              <option value={ASC}>ASC</option>
+              <option value={DESC}>DESC</option>
+            </select>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Search Section */}
-      {searchable && (
+      {showSearch && searchable && (
         <div className="searching" style={{ display: 'flex', flexDirection: 'column' }}>
           <label style={{ fontSize: '1.1em', fontWeight: 'bold', marginBottom: '0.3em' }}>Search</label>
           <input
@@ -149,7 +157,7 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
       )}
 
       {/* Filter Section */}
-      {Object.keys(filters).length > 0 && (
+      {showFilter && Object.keys(filters).length > 0 && (
         <div className="filtering" style={{ display: 'flex', flexDirection: 'column' }}>
           <label style={{ fontSize: '1.1em', fontWeight: 'bold', marginBottom: '0.3em' }}>Filter</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5em' }}>

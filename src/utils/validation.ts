@@ -126,6 +126,15 @@ export const VALIDATION_JSON_SCHEMA = {
         additionalProperties: false,
       },
     },
+    controls: {
+      type: 'object',
+      properties: {
+        showSort: { type: 'boolean' },
+        showSearch: { type: 'boolean' },
+        showFilter: { type: 'boolean' },
+      },
+      additionalProperties: false,
+    },
   },
   additionalProperties: false,
 };
