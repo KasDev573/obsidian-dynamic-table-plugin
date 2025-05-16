@@ -160,17 +160,18 @@ export function useDynamicTablesState(
         orderedCells.map((c) => [c.column.alias, c.value])
       );
 
-      // Inject #known and #prepared into Tags column (for filtering logic)
+      // Add #<column> tags dynamically to the Tags column based on checkbox state
       let tags = typeof allCells['Tags'] === 'string' ? allCells['Tags'] : '';
-      const isKnown = Object.values(checkboxStates).some(
-        (v) => v.rowIndex === rowIdx && v.column === 'Known' && v.checked
-      );
-      const isPrepared = Object.values(checkboxStates).some(
-        (v) => v.rowIndex === rowIdx && v.column === 'Prepared' && v.checked
-      );
 
-      if (isKnown && !tags.includes('#known')) tags += ' #known';
-      if (isPrepared && !tags.includes('#prepared')) tags += ' #prepared';
+      Object.values(checkboxStates).forEach((meta) => {
+        if (meta.rowIndex === rowIdx && meta.checked) {
+          const tag = `#${meta.column.toLowerCase()}`;
+          if (!tags.includes(tag)) {
+            tags += ` ${tag}`;
+          }
+        }
+      });
+
       allCells['Tags'] = tags.trim();
 
       const enrichedCells = orderedCells.map((c) => ({
