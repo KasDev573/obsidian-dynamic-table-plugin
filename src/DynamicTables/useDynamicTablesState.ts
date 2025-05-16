@@ -160,24 +160,25 @@ export function useDynamicTablesState(
         orderedCells.map((c) => [c.column.alias, c.value])
       );
 
-      // Add #<column> tags dynamically to the Tags column based on checkbox state
-      let tags = typeof allCells['Tags'] === 'string' ? allCells['Tags'] : '';
-
+      // Inject 'checked' into the same column as the checkbox if checked
       Object.values(checkboxStates).forEach((meta) => {
         if (meta.rowIndex === rowIdx && meta.checked) {
-          const tag = `#${meta.column.toLowerCase()}`;
-          if (!tags.includes(tag)) {
-            tags += ` ${tag}`;
+          const colName = meta.column;
+          const currentValue = allCells[colName];
+          if (typeof currentValue === 'string') {
+            if (!currentValue.includes('checked')) {
+              allCells[colName] = `${currentValue} checked`;
+            }
+          } else {
+            allCells[colName] = 'checked';
           }
         }
       });
 
-      allCells['Tags'] = tags.trim();
-
       const enrichedCells = orderedCells.map((c) => ({
         ...c,
-        value: c.column.alias === 'Tags' ? allCells['Tags'] : c.value,
-        formattedValue: c.formattedValue, // Do NOT overwrite checkbox with true/false
+        value: allCells[c.column.alias ?? c.column.name],
+        formattedValue: c.formattedValue,
       }));
 
       return {
