@@ -1,3 +1,19 @@
+/**
+ * DynamicTables Component
+ *
+ * This component renders a fully interactive dynamic table within Obsidian.
+ * It handles data rendering, inline cell editing, pagination, filtering,
+ * sorting, and search functionality. It also manages checkbox states
+ * externally by saving/loading to JSON files in the vault.
+ *
+ * Props:
+ * - app: Obsidian App instance, used for vault access and UI integration.
+ * - configuration: Table configuration and metadata from YAML frontmatter.
+ * - tableData: Raw table data extracted from markdown.
+ * - indexOfTheEnhancedTable: Index of the table instance on the page.
+ * - showSort, showSearch, showFilter: Flags to conditionally show UI controls.
+ */
+
 import React, { useEffect, useMemo, useRef } from 'react';
 import { EtConfiguration, RawTableData } from 'src/utils/types';
 import { useDynamicTablesState } from 'src/DynamicTables/useDynamicTablesState';
@@ -21,11 +37,12 @@ type EnhancedTablesProps = {
   configuration: EtConfiguration;
   tableData: RawTableData;
   indexOfTheEnhancedTable: number;
-  showSort: boolean;   // added
-  showSearch: boolean; // added
-  showFilter: boolean; // added
+  showSort: boolean;
+  showSearch: boolean;
+  showFilter: boolean;
 };
 
+// Helper: Get base vault path if local filesystem adapter is used
 const getVaultBasePath = (app: App): string | null => {
   const adapter = app.vault.adapter;
   if (adapter instanceof FileSystemAdapter) {
@@ -34,11 +51,13 @@ const getVaultBasePath = (app: App): string | null => {
   return null;
 };
 
+// Helper: Construct the external JSON file path for checkbox states by filename
 const getStateFilePath = (app: App, fileName: string): string | null => {
   const base = getVaultBasePath(app);
   return base ? path.join(base, '_checkbox-states', `${fileName}.json`) : null;
 };
 
+// Load checkbox state data from external JSON file
 const loadCheckboxStates = (app: App, fileName: string): Record<string, CheckboxMeta> => {
   try {
     const filePath = getStateFilePath(app, fileName);
@@ -52,6 +71,7 @@ const loadCheckboxStates = (app: App, fileName: string): Record<string, Checkbox
   return {};
 };
 
+// Save checkbox state data to external JSON file
 const saveCheckboxStates = (app: App, fileName: string, states: Record<string, CheckboxMeta>) => {
   try {
     const base = getVaultBasePath(app);
@@ -76,8 +96,10 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
   showSearch,
   showFilter,
 }) => {
+  // Reference to tbody element to dynamically insert rows
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
+  // Hook to manage filtering, sorting, searching, pagination state
   const {
     indexedColumns,
     rows,
@@ -92,21 +114,27 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
     setSearching,
   } = useDynamicTablesState(app, configuration, indexOfTheEnhancedTable, tableData);
 
+  // Effect to render rows and bind cell editors & checkbox state management
   useEffect(() => {
     if (!tbodyRef.current) return;
 
+    // Clear previous rows
     tbodyRef.current.textContent = '';
 
+    // Determine file name of active note to load/save checkbox states externally
     const fileName = app.workspace.getActiveFile()?.basename ?? 'default';
     const checkboxStates = loadCheckboxStates(app, fileName);
 
+    // Render each row
     rows.forEach((row) => {
       const tr = document.createElement('tr');
       tr.setAttribute('data-dt-row', row.index.toString());
 
+      // Current markdown content (for inline editing persistence)
       const currentContent = app.workspace.getActiveViewOfType(MarkdownView)?.data ?? '';
       const tableManager = new TableManager();
 
+      // Render visible cells in order
       row.orderedCells
         .filter((c) => !c.column.hidden)
         .forEach((cell, idx2) => {
@@ -114,20 +142,24 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
           td.setAttribute('data-dt-cell', idx2.toString());
           td.setAttribute('data-dt-row-cell', `${row.index}-${idx2}`);
 
+          // Set cell alignment if specified
           if (tableData.rowDirections[idx2] !== null) {
             td.setAttribute('align', tableData.rowDirections[idx2] as string);
           }
 
+          // Apply nowrap class if specified
           if (cell.column.nowrap) {
             td.className = 'dynamic-table-nowrap';
           }
 
+          // Append formatted content or fallback to innerHTML
           try {
             td.appendChild(cell.formattedValue);
           } catch (e) {
             td.innerHTML = cell.formattedValue;
           }
 
+          // Load checkbox states and bind change events for saving state externally
           const checkboxes = td.querySelectorAll<HTMLInputElement>('input[type="checkbox"][id]');
           checkboxes.forEach((checkbox) => {
             const id = checkbox.id;
@@ -146,6 +178,7 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
             });
           });
 
+          // Inline cell editing: update markdown content on value change
           const onValueChange = (newVal: string) => {
             const modifiedRowValues = row.orderedCells.map((c, i) =>
               i === idx2 ? newVal : c.rawValue,
@@ -163,6 +196,7 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
             app.workspace.activeEditor?.previewMode?.rerender?.();
           };
 
+          // Initialize editable cells with editor UI
           if (cell.column.editable) {
             makeEditor(td, cell, configuration, onValueChange);
             td.classList.add('editor-cursor-pointer');
@@ -171,6 +205,7 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
           tr.appendChild(td);
         });
 
+      // Append the fully constructed row to tbody
       tbodyRef.current!.appendChild(tr);
     });
   }, [
@@ -182,6 +217,7 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
     tableData.rowDirections,
   ]);
 
+  // Memoize CSS styles parsed from configuration.style
   const style = useMemo<string | undefined>(() => {
     if (!configuration.style) return undefined;
 
@@ -201,6 +237,7 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
     }
   }, [configuration.style]);
 
+  // Render table with optional controls and pagination
   return (
     <div className="dynamic-table">
       {style && <style>{style}</style>}

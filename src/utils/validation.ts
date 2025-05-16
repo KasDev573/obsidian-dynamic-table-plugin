@@ -1,7 +1,20 @@
+/**
+ * validation.ts
+ *
+ * Defines JSON schema validation for Dynamic Tables plugin configuration.
+ * Uses the Ajv library to compile and validate the YAML-derived configuration object
+ * against a strict JSON schema to ensure correctness and prevent invalid configurations.
+ *
+ * This validation covers all configuration options including column definitions,
+ * pagination, filters, UI control toggles, and formatting options.
+ */
+
 import Ajv from 'ajv';
 
 import { EtConfiguration } from 'src/utils/types';
 
+// JSON Schema defining the structure and allowed types/values
+// for the plugin configuration object parsed from YAML.
 export const VALIDATION_JSON_SCHEMA = {
   type: 'object',
   properties: {
@@ -39,9 +52,9 @@ export const VALIDATION_JSON_SCHEMA = {
       type: 'object',
       additionalProperties: {
         anyOf: [
-          { type: 'string' },
+          { type: 'string' },               // Filters can be string expressions...
           {
-            type: 'object',
+            type: 'object',                 // ...or objects mapping strings to strings
             additionalProperties: { type: 'string' },
           },
         ],
@@ -65,7 +78,7 @@ export const VALIDATION_JSON_SCHEMA = {
     columns: {
       type: 'object',
       propertyNames: {
-        pattern: '^.*$',
+        pattern: '^.*$',                   // Column keys can be any string
       },
       additionalProperties: {
         type: 'object',
@@ -139,6 +152,13 @@ export const VALIDATION_JSON_SCHEMA = {
   additionalProperties: false,
 };
 
+/**
+ * Validates a Dynamic Tables plugin configuration object against
+ * the JSON schema defined above.
+ *
+ * @param configuration The configuration object to validate
+ * @returns true if valid, otherwise a string describing validation errors
+ */
 export function validateConfiguration(
   configuration: EtConfiguration,
 ): true | string {
@@ -148,6 +168,7 @@ export function validateConfiguration(
   const valid = validate(configuration);
 
   if (!valid) {
+    // Aggregate all validation error messages into a single string
     return validate
       .errors!.map((e) => `${e.instancePath} ${e.message}`)
       .join(' // ');

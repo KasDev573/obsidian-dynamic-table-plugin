@@ -1,6 +1,6 @@
 {
   "name": "dynamic-table-plugin",
-  "version": "1.0.5",
+  "version": "1.0.0",
   "description": "Add programmable controls to selected tables",
   "main": "main.js",
   "scripts": {

@@ -1,3 +1,14 @@
+/**
+ * Main plugin entry for the Dynamic Tables Obsidian plugin.
+ *
+ * Responsibilities:
+ * - Initialize the plugin and register markdown post-processors to detect
+ *   and render enhanced tables with YAML configurations.
+ * - Handle file system events (rename/delete) to maintain synchronization
+ *   of external JSON files storing checkbox states linked to markdown files.
+ * - Provide a settings tab UI to verify plugin activation.
+ */
+
 import { Plugin, PluginSettingTab, App, Setting, Notice, TFile, FileSystemAdapter } from 'obsidian';
 
 // Utility to retrieve and validate the table-related context from a markdown block
@@ -14,7 +25,11 @@ import { TableManager } from 'src/TableManager';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Helper function to identify if something went wrong while getting context
+/**
+ * Type guard to check if the mount context is an error string.
+ * @param possibleMountContext Any value to check
+ * @returns True if the value is a string representing an error, else false
+ */
 function isError(possibleMountContext: any): possibleMountContext is string {
   return typeof possibleMountContext === 'string';
 }
@@ -22,6 +37,10 @@ function isError(possibleMountContext: any): possibleMountContext is string {
 export default class DynamicTablePlugin extends Plugin {
   public tableManager = new TableManager();
 
+  /**
+   * Called when the plugin is loaded. Sets up the settings tab,
+   * registers markdown post-processing, and file system event listeners.
+   */
   async onload() {
     this.addSettingTab(new DynamicTablesSettingTab(this.app, this));
 
@@ -63,15 +82,24 @@ export default class DynamicTablePlugin extends Plugin {
       }, 300);
     }, 1);
 
-    // Listen for rename and delete events
+    // Listen for vault file rename and delete events to sync external checkbox state files
     this.registerEvent(this.app.vault.on('rename', this.onFileRename.bind(this)));
     this.registerEvent(this.app.vault.on('delete', this.onFileDelete.bind(this)));
   }
 
+  /**
+   * Called when the plugin is unloaded.
+   */
   onunload() {
     console.log("Dynamic Tables plugin unloaded.");
   }
 
+  /**
+   * Event handler for vault file rename events.
+   * Renames the corresponding external JSON checkbox state file if it exists.
+   * @param file The renamed file
+   * @param oldPath The old path of the file before rename
+   */
   async onFileRename(file: TFile, oldPath: string) {
     try {
       const basePath = this.getVaultBasePath();
@@ -97,6 +125,11 @@ export default class DynamicTablePlugin extends Plugin {
     }
   }
 
+  /**
+   * Event handler for vault file delete events.
+   * Deletes the corresponding external JSON checkbox state file if it exists.
+   * @param file The deleted file
+   */
   async onFileDelete(file: TFile) {
     try {
       const basePath = this.getVaultBasePath();
@@ -118,6 +151,11 @@ export default class DynamicTablePlugin extends Plugin {
     }
   }
 
+  /**
+   * Gets the base path of the vault if using a FileSystemAdapter (local vault).
+   * Returns null if the vault is not local.
+   * @returns The base path string or null
+   */
   getVaultBasePath(): string | null {
     const adapter = this.app.vault.adapter;
     if (adapter instanceof FileSystemAdapter) {
@@ -127,6 +165,10 @@ export default class DynamicTablePlugin extends Plugin {
   }
 }
 
+/**
+ * Settings tab UI class for the Dynamic Tables plugin.
+ * Provides a simple interface to verify plugin activation.
+ */
 class DynamicTablesSettingTab extends PluginSettingTab {
   plugin: DynamicTablePlugin;
 
@@ -135,6 +177,9 @@ class DynamicTablesSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
+  /**
+   * Renders the settings tab contents.
+   */
   display(): void {
     const { containerEl } = this;
 

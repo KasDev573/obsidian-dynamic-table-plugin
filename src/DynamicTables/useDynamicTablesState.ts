@@ -1,3 +1,18 @@
+/**
+ * useDynamicTablesState Hook
+ *
+ * This hook manages the core state and logic for the dynamic tables plugin.
+ * It processes table data and configuration, handling sorting, filtering,
+ * searching, pagination, and checkbox state persistence to external JSON files.
+ *
+ * Responsibilities include:
+ * - Parsing and indexing columns with proper formatting
+ * - Building enriched rows from raw markdown data
+ * - Managing checkbox state external storage and synchronization
+ * - Applying sorting, filtering, and search functions on table rows
+ * - Handling pagination and pagination state changes
+ */
+
 import {
   EtConfiguration,
   EtConfigurationColumn,
@@ -34,12 +49,19 @@ import { TableManager } from 'src/TableManager';
 import fs from 'fs';
 import path from 'path';
 
+// Type definition for saved checkbox state metadata
 type CheckboxMeta = {
   checked: boolean;
   rowIndex: number;
   column: string;
 };
 
+/**
+ * Loads checkbox states from an external JSON file saved in the vault.
+ * @param app Obsidian app instance for accessing vault
+ * @param fileName Name of the active file to associate checkbox states
+ * @returns Object mapping checkbox IDs to their saved state metadata
+ */
 function loadCheckboxStates(app: App, fileName: string): Record<string, CheckboxMeta> {
   try {
     const adapter = app.vault.adapter;
@@ -56,16 +78,26 @@ function loadCheckboxStates(app: App, fileName: string): Record<string, Checkbox
   return {};
 }
 
+/**
+ * Main hook that manages the table state and logic.
+ * @param app Obsidian app instance
+ * @param configuration Table configuration object
+ * @param indexOfTheEnhancedTable Index of the current table instance on the page
+ * @param tableData Raw data extracted from the markdown table
+ * @returns An object containing state and state setters for rendering and interaction
+ */
 export function useDynamicTablesState(
   app: App,
   configuration: EtConfiguration,
   indexOfTheEnhancedTable: number,
   tableData: RawTableData,
 ) {
+  // State for sorting, filtering, searching, and pagination
   const [sorting, setSorting] = useState<string | null>(configuration.sort ?? null);
   const [filtering, setFiltering] = useState<string[]>([]);
   const [searching, setSearching] = useState<string | null>(null);
 
+  // Initialize pagination state based on config or defaults
   const [pagination, setPagination] = useState<Pagination | null>(() => {
     if (configuration.pagination) {
       const pageSize = configuration.pagination['page-size'] ?? DEFAULT_PAGE_SIZE;
@@ -79,13 +111,19 @@ export function useDynamicTablesState(
     return null;
   });
 
+  // Track total number of rows before pagination
   const [totalNumberOfUnpaginatedRows, setTotalNumberOfUnpaginatedRows] =
     useState<number>(tableData.rows.length);
 
+  // Callback to update pagination state from UI
   const onChangePagination = useCallback((p: PaginationOptions) => {
     setPagination((pagination) => ({ ...pagination, ...p }) as Pagination);
   }, []);
 
+  /**
+   * Memoized array of column objects enriched with configuration and formatting.
+   * Parses column types and assigns formatters.
+   */
   const indexedColumns = useMemo<EtDataColumn[]>(() => {
     return tableData.columns.map((columnName, index) => {
       const columnConfiguration = (configuration.columns?.[columnName] ?? {}) as EtConfigurationColumn;
@@ -119,6 +157,11 @@ export function useDynamicTablesState(
     });
   }, [tableData.columns, configuration.columns, configuration.editable]);
 
+  /**
+   * Memoized array of enriched rows with cell values, checkbox state injection,
+   * and formatted cell content. Also applies sorting, filtering, searching,
+   * and pagination to the data.
+   */
   const rows = useMemo<EtDataRow[]>(() => {
     const dateFormat = configuration['date-format'] ?? DEFAULT_DATE_FORMAT;
     const datetimeFormat = configuration['datetime-format'] ?? DEFAULT_DATE_TIME_FORMAT;
@@ -134,6 +177,7 @@ export function useDynamicTablesState(
     const checkboxStates = loadCheckboxStates(app, fileName);
     let updated = false;
 
+    // Map over raw rows to enrich cell data and sync checkbox states
     let result: EtDataRow[] = tableData.rows.map((cells, rowIdx) => {
       const orderedCells: EtDataCell[] = cells.map((cellContent, cellIdx) => {
         const column = indexedColumns[cellIdx];
@@ -146,7 +190,7 @@ export function useDynamicTablesState(
 
         const raw = rawTableLines?.[rowIdx + 2]?.[cellIdx] ?? '';
 
-        // Check for checkbox input
+        // Detect checkboxes and update external state store
         const isCheckbox = raw.includes('type="checkbox"');
         if (isCheckbox) {
           const match = raw.match(/id="([^"]+)"/);
@@ -175,11 +219,12 @@ export function useDynamicTablesState(
         };
       });
 
+      // Build an object keyed by column alias for quick lookups
       const allCells = Object.fromEntries(
         orderedCells.map((c) => [c.column.alias ?? c.column.name, c.value])
       );
 
-      // Inject 'true' or 'false' based on checkboxStates
+      // Inject 'true' or 'false' strings into row data for checkbox columns based on saved state
       Object.values(checkboxStates).forEach((meta) => {
         if (meta.rowIndex === rowIdx) {
           const colName = meta.column;
@@ -197,12 +242,14 @@ export function useDynamicTablesState(
         }
       });
 
+      // Enrich the cells with updated checkbox-injected values
       const enrichedCells = orderedCells.map((c) => ({
         ...c,
         value: allCells[c.column.alias ?? c.column.name],
         formattedValue: c.formattedValue,
       }));
 
+      // Return the enriched row object
       return {
         index: rowIdx,
         orderedCells: enrichedCells,
@@ -210,7 +257,7 @@ export function useDynamicTablesState(
       } as EtDataRow;
     });
 
-    // Write updated checkboxStates if needed
+    // Write back updated checkbox state file if new checkboxes detected
     if (updated && filePath) {
       try {
         fs.writeFileSync(filePath, JSON.stringify(checkboxStates, null, 2));
@@ -219,7 +266,7 @@ export function useDynamicTablesState(
       }
     }
 
-    // Sorting
+    // Apply sorting if specified in state
     if (sorting) {
       const sortFn = getSortingFunction(sorting, indexedColumns);
       if (sortFn) {
@@ -228,7 +275,7 @@ export function useDynamicTablesState(
       }
     }
 
-    // Filtering / Searching
+    // Apply filtering and searching to rows
     if (filtering.length > 0 || searching) {
       result = result.filter(($row) => {
         const matchesFilter = filtering.every((expr) => {
@@ -256,8 +303,10 @@ export function useDynamicTablesState(
       });
     }
 
+    // Update total count of rows before pagination
     setTotalNumberOfUnpaginatedRows(result.length);
 
+    // Apply pagination slicing if pagination is enabled
     if (pagination) {
       result = result.slice(
         pagination.pageSize * (pagination.pageNumber - 1),
@@ -278,6 +327,7 @@ export function useDynamicTablesState(
     indexedColumns,
   ]);
 
+  // Return state and setters for use by the component
   return {
     indexedColumns,
     rows,

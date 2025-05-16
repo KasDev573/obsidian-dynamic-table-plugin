@@ -1,7 +1,7 @@
 {
   "id": "obsidian-dynamic-table-plugin",
   "name": "Dynamic Table Plugin",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "minAppVersion": "0.15.0",
   "description": "A customizable table enhancement plugin for Obsidian with YAML filters and searchable data.",
   "author": "KasDev573",

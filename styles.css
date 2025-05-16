@@ -1,9 +1,19 @@
+/*
+ * Stylesheet for Dynamic Tables Plugin UI Components
+ *
+ * This file defines the styling rules for the enhanced table elements including
+ * the table container, editor controls, pagination controls, filter and sort controls,
+ * and responsive behavior on smaller screens.
+ */
+
+/* Container and scroll for the table */
 .dynamic-table {
   & .table-container {
     width: 100%;
-    overflow-x: scroll;
+    overflow-x: scroll; /* Enable horizontal scrolling for wide tables */
   }
 
+  /* Buttons used within cell editors */
   & .editor-button {
     font-size: var(--font-smallest);
     height: 20px;
@@ -11,6 +21,7 @@
     margin-right: 5px;
   }
 
+  /* Container for editors to center align content */
   & .editor-container {
     display: flex;
     align-items: center;
@@ -19,6 +30,7 @@
     justify-items: center;
   }
 
+  /* Margin utility classes */
   & .editor-mr-5 {
     margin-right: 5px;
   }
@@ -27,11 +39,13 @@
     margin-top: 1em;
   }
 
+  /* Cursor style when hovering over editable cells */
   & .editor-cursor-pointer {
     cursor: pointer;
   }
 }
 
+/* Pagination controls styling */
 .dynamic-table-pagination {
   display: flex;
   justify-content: space-between;
@@ -46,13 +60,14 @@
   }
 
   & button:disabled {
-    opacity: 0.4;
+    opacity: 0.4; /* Dim disabled buttons */
   }
 
   & button.active {
-    color: var(--text-accent);
+    color: var(--text-accent); /* Highlight active page button */
   }
 
+  /* Total items count display */
   & .total {
     font-size: var(--font-smallest);
     padding-top: 1em;
@@ -60,11 +75,12 @@
   }
 }
 
+/* Controls (sort, search, filter) container styling */
 .dynamic-table-controls {
   display: flex;
 
   & > div {
-    margin-right: 1em;
+    margin-right: 1em; /* Space between control sections */
   }
 
   & label {
@@ -72,6 +88,7 @@
     font-weight: var(--font-light);
   }
 
+  /* Additional spacing for sorting selects */
   & .sorting {
     & select {
       margin-right: 0.5em;
@@ -79,39 +96,46 @@
   }
 }
 
+/* Prevent text wrapping in cells */
 .dynamic-table-nowrap {
   white-space: nowrap !important;
 }
 
+/* Sticky header for table header row */
 .dynamic-table-fix-header {
   position: sticky;
   top: 0;
 }
 
+/* Hide original table after enhancement */
 .dynamic-table-hidden {
   display: none;
 }
 
+/* Styling for error messages */
 .dynamic-table-error {
   color: var(--text-error);
 }
 
+/* Container for error messages */
 .dynamic-table-errors {
   margin-bottom: 1.5em;
 }
 
+/* Responsive styles for smaller screens */
 @media (max-width: 700px) {
+  /* Stack controls vertically on narrow screens */
   .dynamic-table-controls {
     flex-direction: column;
     margin-bottom: 1em;
   }
 
+  /* Hide pagination details for mobile to save space */
   .dynamic-table-pagination {
     margin-top: 1em;
 
     & .pag-nav-dots,
     & .pag-nav-page,
-    & .pag-nav-dots,
     & select {
       display: none;
     }
