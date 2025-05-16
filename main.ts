@@ -20,14 +20,11 @@ function isError(possibleMountContext: any): possibleMountContext is string {
 }
 
 export default class DynamicTablePlugin extends Plugin {
-  // Instance of the table manager that manages table logic
   public tableManager = new TableManager();
 
   async onload() {
-    // Register the plugin's settings tab in Obsidian's UI
     this.addSettingTab(new DynamicTablesSettingTab(this.app, this));
 
-    // Hook into Obsidian's markdown post-processor
     this.registerMarkdownPostProcessor(async (el, ctx) => {
       const possibleMountContext = await getMountContext(el, ctx);
 
@@ -35,17 +32,14 @@ export default class DynamicTablePlugin extends Plugin {
 
       if (isError(possibleMountContext)) {
         const errorsContainer = el.createDiv({ cls: 'enhanced-tables-errors' });
-
         errorsContainer.createDiv({
           text: `⚠️ Validation errors:`,
           cls: 'dynamic-tables-error',
         });
-
         errorsContainer.createDiv({
           text: `- ${possibleMountContext}`,
           cls: 'dynamic-tables-error',
         });
-
         return;
       }
 
@@ -67,29 +61,22 @@ export default class DynamicTablePlugin extends Plugin {
           indexOfTheEnhancedTable,
         );
       }, 300);
-    }, 1); // Post-processor priority
+    }, 1);
 
-    // Register vault event listener for file renames
-    this.registerEvent(
-      this.app.vault.on('rename', this.onFileRename.bind(this))
-    );
+    // Listen for rename and delete events
+    this.registerEvent(this.app.vault.on('rename', this.onFileRename.bind(this)));
+    this.registerEvent(this.app.vault.on('delete', this.onFileDelete.bind(this)));
   }
 
   onunload() {
     console.log("Dynamic Tables plugin unloaded.");
   }
 
-  /**
-   * Handler for vault file rename events
-   * @param file - The file that was renamed (TFile)
-   * @param oldPath - The old path of the file before rename
-   */
   async onFileRename(file: TFile, oldPath: string) {
     try {
       const basePath = this.getVaultBasePath();
       if (!basePath) return;
 
-      // Only process markdown files
       if (file.extension !== 'md') return;
 
       const statesDir = path.join(basePath, '_checkbox-states');
@@ -101,7 +88,6 @@ export default class DynamicTablePlugin extends Plugin {
       const oldStateFilePath = path.join(statesDir, `${oldFileName}.json`);
       const newStateFilePath = path.join(statesDir, `${newFileName}.json`);
 
-      // If the old checkbox state file exists, rename it to new filename
       if (fs.existsSync(oldStateFilePath)) {
         await fs.promises.rename(oldStateFilePath, newStateFilePath);
         console.log(`[DynamicTables] Renamed checkbox state file: ${oldStateFilePath} -> ${newStateFilePath}`);
@@ -111,12 +97,29 @@ export default class DynamicTablePlugin extends Plugin {
     }
   }
 
-  /**
-   * Helper to get the vault base path (folder containing your notes)
-   */
+  async onFileDelete(file: TFile) {
+    try {
+      const basePath = this.getVaultBasePath();
+      if (!basePath) return;
+
+      if (file.extension !== 'md') return;
+
+      const statesDir = path.join(basePath, '_checkbox-states');
+      if (!fs.existsSync(statesDir)) return;
+
+      const stateFilePath = path.join(statesDir, `${file.basename}.json`);
+
+      if (fs.existsSync(stateFilePath)) {
+        await fs.promises.unlink(stateFilePath);
+        console.log(`[DynamicTables] Deleted checkbox state file: ${stateFilePath}`);
+      }
+    } catch (error) {
+      console.error('[DynamicTables] Error deleting checkbox state file:', error);
+    }
+  }
+
   getVaultBasePath(): string | null {
     const adapter = this.app.vault.adapter;
-    // Use instanceof to check for FileSystemAdapter and safely call getBasePath()
     if (adapter instanceof FileSystemAdapter) {
       return adapter.getBasePath();
     }
@@ -124,7 +127,6 @@ export default class DynamicTablePlugin extends Plugin {
   }
 }
 
-// Settings Tab Class
 class DynamicTablesSettingTab extends PluginSettingTab {
   plugin: DynamicTablePlugin;
 
