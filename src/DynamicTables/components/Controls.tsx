@@ -1,22 +1,25 @@
 import React, {
   Dispatch,
   SetStateAction,
+  useEffect,
   useMemo,
+  useState,
 } from 'react';
 import { EtConfiguration, EtDataColumn } from 'src/utils/types';
 
 const NONE_SELECTED_SIGNAL = '---';
+const ASC = 'asc';
+const DESC = 'desc';
 
-type GroupedFiltersConfiguration = Record<
-  string,
-  [string, string][]
->;
+type GroupedFiltersConfiguration = Record<string, [string, string][]>;
 
 type ControlsViewProps = {
   columns: EtDataColumn[];
   configuration: EtConfiguration;
   filtering: string[];
   setFiltering: Dispatch<SetStateAction<string[]>>;
+  sorting: string | null;
+  setSorting: Dispatch<SetStateAction<string | null>>;
   searching: string | null;
   setSearching: Dispatch<SetStateAction<string | null>>;
 };
@@ -26,6 +29,8 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
   configuration,
   filtering,
   setFiltering,
+  sorting,
+  setSorting,
   searching,
   setSearching,
 }) => {
@@ -61,35 +66,104 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
     setFiltering(filtering.filter((f) => f !== value));
   };
 
+  const [sortOrder, setSortOrder] = useState<string>(
+    (sorting ?? '').startsWith('-') ? DESC : ASC
+  );
+  const [innerSorting, setInnerSorting] = useState<string>(
+    sorting ? sorting.replace(/^-/, '') : NONE_SELECTED_SIGNAL
+  );
+
+  useEffect(() => {
+    if (innerSorting === NONE_SELECTED_SIGNAL) {
+      setSorting(null);
+    } else {
+      setSorting(`${sortOrder === DESC ? '-' : ''}${innerSorting}`);
+    }
+  }, [innerSorting, sortOrder, setSorting]);
+
   return (
-    <div className="dynamic-table-controls">
+    <div
+      className="dynamic-table-controls"
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'flex-start',
+        gap: '1.2rem',
+        marginBottom: '1rem',
+      }}
+    >
+      {/* Sort Section */}
+      <div className="sorting" style={{ display: 'flex', flexDirection: 'column' }}>
+        <label style={{ fontSize: '1.1em', fontWeight: 'bold', marginBottom: '0.3em' }}>Sort</label>
+        <div style={{ display: 'flex', gap: '0.5em' }}>
+          <select
+            value={innerSorting}
+            onChange={(evt) => setInnerSorting(evt.target.value)}
+            style={{
+              fontSize: '1em',
+              padding: '0.3em',
+              minWidth: '180px',
+              minHeight: '2.2em',
+            }}
+          >
+            <option value={NONE_SELECTED_SIGNAL}>{NONE_SELECTED_SIGNAL}</option>
+            {columns.map((c) => (
+              <option key={c.alias} value={c.alias}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={sortOrder}
+            onChange={(evt) => setSortOrder(evt.target.value)}
+            style={{
+              fontSize: '1em',
+              padding: '0.3em',
+              minWidth: '100px',
+              minHeight: '2.2em',
+            }}
+          >
+            <option value={ASC}>ASC</option>
+            <option value={DESC}>DESC</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Search Section */}
       {searchable && (
-        <div className="searching">
-          <label style={{ fontSize: '1.2em', fontWeight: 'bold' }}>Search</label>
-          <div>
-            <input
-              type="text"
-              style={{ fontSize: '1.1em', padding: '0.4em' }}
-              value={searching || ''}
-              onChange={(evt) => setSearching(evt.target.value || null)}
-            />
-          </div>
+        <div className="searching" style={{ display: 'flex', flexDirection: 'column' }}>
+          <label style={{ fontSize: '1.1em', fontWeight: 'bold', marginBottom: '0.3em' }}>Search</label>
+          <input
+            type="text"
+            style={{
+              fontSize: '1em',
+              padding: '0.3em',
+              minWidth: '200px',
+              minHeight: '2.2em',
+            }}
+            value={searching || ''}
+            onChange={(evt) => setSearching(evt.target.value || null)}
+          />
         </div>
       )}
 
+      {/* Filter Section */}
       {Object.keys(filters).length > 0 && (
-        <div className="filtering">
-          <label style={{ fontSize: '1.2em', fontWeight: 'bold' }}>Filter</label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5em', flexWrap: 'wrap' }}>
+        <div className="filtering" style={{ display: 'flex', flexDirection: 'column' }}>
+          <label style={{ fontSize: '1.1em', fontWeight: 'bold', marginBottom: '0.3em' }}>Filter</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5em' }}>
             <select
               onChange={handleFilterChange}
               value={NONE_SELECTED_SIGNAL}
-              style={{ fontSize: '1.1em', padding: '0.4em' }}
+              style={{
+                fontSize: '1em',
+                padding: '0.3em',
+                minHeight: '2.2em',
+                minWidth: '180px',
+              }}
             >
-              <option value={NONE_SELECTED_SIGNAL} disabled>
-
-              </option>
-
+              <option value={NONE_SELECTED_SIGNAL} disabled></option>
               {Object.entries(filters).map(([group, options]) => (
                 <optgroup key={group} label={group}>
                   {options.map(([label, value]) => (
@@ -117,7 +191,7 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
                     backgroundColor: 'var(--background-modifier-hover)',
                     border: '1px solid var(--background-modifier-border)',
                     borderRadius: '6px',
-                    fontSize: '1.05em',
+                    fontSize: '0.95em',
                     color: 'var(--text-normal)',
                   }}
                 >

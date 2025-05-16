@@ -80,6 +80,8 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
     totalNumberOfUnpaginatedRows,
     filtering,
     setFiltering,
+    sorting,
+    setSorting,
     searching,
     setSearching,
   } = useDynamicTablesState(app, configuration, indexOfTheEnhancedTable, tableData);
@@ -203,6 +205,8 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
           columns={indexedColumns}
           filtering={filtering}
           setFiltering={setFiltering}
+          sorting={sorting}
+          setSorting={setSorting}
           searching={searching}
           setSearching={setSearching}
         />
