@@ -1,7 +1,7 @@
 {
   "id": "dynamic-table",
   "name": "Dynamic Table",
-  "version": "v1.0.0",
+  "version": "1.0.0",
   "minAppVersion": "0.15.0",
   "description": "A customizable dynamic table with YAML filters and searchable data.",
   "author": "KasDev573",
