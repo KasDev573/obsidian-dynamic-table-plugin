@@ -29,8 +29,32 @@ import { extractValue } from 'src/utils/values';
 import { getSortingFunction } from 'src/utils/sorting';
 
 import { PaginationOptions } from 'src/DynamicTables/components/PaginationView';
-import { App, MarkdownView } from 'obsidian';
+import { App, FileSystemAdapter, MarkdownView } from 'obsidian';
 import { TableManager } from 'src/TableManager';
+import fs from 'fs';
+import path from 'path';
+
+type CheckboxMeta = {
+  checked: boolean;
+  rowIndex: number;
+  column: string;
+};
+
+function loadCheckboxStates(app: App, fileName: string): Record<string, CheckboxMeta> {
+  try {
+    const adapter = app.vault.adapter;
+    if (adapter instanceof FileSystemAdapter) {
+      const filePath = path.join(adapter.getBasePath(), '_checkbox-states', `${fileName}.json`);
+      if (fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, 'utf-8');
+        return JSON.parse(raw);
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load checkbox states', e);
+  }
+  return {};
+}
 
 export function useDynamicTablesState(
   app: App,
@@ -38,30 +62,20 @@ export function useDynamicTablesState(
   indexOfTheEnhancedTable: number,
   tableData: RawTableData,
 ) {
-  const [sorting, setSorting] = useState<string | null>(
-    configuration.sort ?? null,
-  );
+  const [sorting, setSorting] = useState<string | null>(configuration.sort ?? null);
   const [filtering, setFiltering] = useState<string[]>([]);
   const [searching, setSearching] = useState<string | null>(null);
 
   const [pagination, setPagination] = useState<Pagination | null>(() => {
     if (configuration.pagination) {
-      const pageSize =
-        configuration.pagination['page-size'] ?? DEFAULT_PAGE_SIZE;
-      const pageSizes =
-        configuration.pagination['page-sizes'] ?? DEFAULT_PAGES_SIZE_OPTIONS;
+      const pageSize = configuration.pagination['page-size'] ?? DEFAULT_PAGE_SIZE;
+      const pageSizes = configuration.pagination['page-sizes'] ?? DEFAULT_PAGES_SIZE_OPTIONS;
       if (!pageSizes.includes(pageSize)) {
         pageSizes.push(pageSize);
         pageSizes.sort();
       }
-
-      return {
-        pageNumber: 1,
-        pageSize,
-        pageSizes,
-      };
+      return { pageNumber: 1, pageSize, pageSizes };
     }
-
     return null;
   });
 
@@ -73,154 +87,135 @@ export function useDynamicTablesState(
   }, []);
 
   const indexedColumns = useMemo<EtDataColumn[]>(() => {
-    const indexedColumns: EtDataColumn[] = tableData.columns.map(
-      (columnName, index) => {
-        const name = columnName;
-        const columnConfiguration = (configuration.columns?.[name] ??
-          {}) as EtConfigurationColumn;
+    return tableData.columns.map((columnName, index) => {
+      const columnConfiguration = (configuration.columns?.[columnName] ?? {}) as EtConfigurationColumn;
+      const { formatter, ...rest } = columnConfiguration;
+      const type = rest.type ?? DEFAULT_COLUMNS_TYPE;
 
-        const { formatter, ...columnConfigurationData } = columnConfiguration;
+      const dateFormat =
+        type === 'datetime'
+          ? columnConfiguration['date-format'] ?? DEFAULT_DATE_TIME_FORMAT
+          : type === 'time'
+          ? DEFAULT_TIME_FORMAT
+          : columnConfiguration['date-format'] ?? DEFAULT_DATE_FORMAT;
 
-        const type = columnConfigurationData.type ?? DEFAULT_COLUMNS_TYPE;
+      const base: EtDataColumn = {
+        ...rest,
+        alias: rest.alias || columnName,
+        editable: 'editable' in columnConfiguration ? !!columnConfiguration.editable : !!configuration.editable,
+        type,
+        name: columnName,
+        index,
+        dateFormat,
+        numberFormat: parseNumberFormat(columnConfiguration['number-format'] ?? '', DEFAULT_NUMBER_FORMAT),
+        yesFormat: rest['yes-format'] ?? DEFAULT_BOOL_YES_FORMAT,
+        noFormat: rest['no-format'] ?? DEFAULT_BOOL_NO_FORMAT,
+        el: document.createElement('td'),
+        formatter: null as any,
+      };
 
-        let dateFormat;
-        if (type === 'datetime') {
-          dateFormat =
-            columnConfiguration['date-format'] ?? DEFAULT_DATE_TIME_FORMAT;
-        } else if (type === 'time') {
-          dateFormat = DEFAULT_TIME_FORMAT;
-        } else {
-          dateFormat =
-            columnConfiguration['date-format'] ?? DEFAULT_DATE_FORMAT;
-        }
-
-        const columnData = {
-          ...columnConfigurationData,
-          alias: columnConfigurationData.alias || name,
-          editable:
-            'editable' in columnConfiguration
-              ? !!columnConfiguration.editable
-              : !!configuration.editable,
-          type,
-          name,
-          index,
-          dateFormat,
-          numberFormat: parseNumberFormat(
-            columnConfiguration['number-format'] ?? '',
-            DEFAULT_NUMBER_FORMAT,
-          ),
-          yesFormat:
-            columnConfigurationData['yes-format'] ?? DEFAULT_BOOL_YES_FORMAT,
-          noFormat:
-            columnConfigurationData['no-format'] ?? DEFAULT_BOOL_NO_FORMAT,
-        } as unknown as EtDataColumn;
-
-        columnData.formatter = makeFormatterForColumn(columnData, formatter);
-
-        return columnData;
-      },
-    );
-
-    return indexedColumns;
+      base.formatter = makeFormatterForColumn(base, formatter);
+      return base;
+    });
   }, [tableData.columns, configuration.columns, configuration.editable]);
 
   const rows = useMemo<EtDataRow[]>(() => {
     const dateFormat = configuration['date-format'] ?? DEFAULT_DATE_FORMAT;
-    const datetimeFormat =
-      configuration['datetime-format'] ?? DEFAULT_DATE_TIME_FORMAT;
+    const datetimeFormat = configuration['datetime-format'] ?? DEFAULT_DATE_TIME_FORMAT;
     const yesFormat = configuration['yes-format'] ?? DEFAULT_BOOL_YES_INPUT;
 
-    let rows: EtDataRow[] = [];
-
-    const currentContent =
-      app.workspace.getActiveViewOfType(MarkdownView)?.data ?? '';
+    const currentContent = app.workspace.getActiveViewOfType(MarkdownView)?.data ?? '';
     const tableManager = new TableManager();
-    const rawTableLines = tableManager.readTableLines(
-      currentContent,
-      indexOfTheEnhancedTable,
-    );
+    const rawTableLines = tableManager.readTableLines(currentContent, indexOfTheEnhancedTable);
 
-    rows = tableData.rows.map((cells, rowIdx) => {
-      let orderedCells: EtDataCell[] = cells.map((cellContent, cellIdx) => {
-        const dateFieldFormat = (() => {
-          if (indexedColumns[cellIdx].type === 'time') {
-            return DEFAULT_TIME_FORMAT;
-          } else if (indexedColumns[cellIdx].type === 'datetime') {
-            return datetimeFormat;
-          }
+    const fileName = app.workspace.getActiveFile()?.basename ?? 'default';
+    const checkboxStates = loadCheckboxStates(app, fileName);
 
-          return dateFormat;
-        })();
+    let result: EtDataRow[] = tableData.rows.map((cells, rowIdx) => {
+      const orderedCells: EtDataCell[] = cells.map((cellContent, cellIdx) => {
+        const column = indexedColumns[cellIdx];
+        const format =
+          column.type === 'datetime' ? datetimeFormat :
+          column.type === 'time' ? DEFAULT_TIME_FORMAT :
+          dateFormat;
 
-        const value = extractValue(
-          cellContent,
-          indexedColumns[cellIdx],
-          dateFieldFormat,
-          yesFormat,
-        );
+        const value = extractValue(cellContent, column, format, yesFormat);
+
+        // Preserve the original HTML checkbox input element (not boolean)
+        const raw = rawTableLines?.[rowIdx + 2]?.[cellIdx] ?? '';
 
         return {
-          column: indexedColumns[cellIdx],
-          rawValue: rawTableLines?.[rowIdx + 2]?.[cellIdx] ?? '',
+          column,
+          rawValue: raw,
           value,
-        } as EtDataCell;
+          el: column.el,
+          formattedValue: column.formatter(value, {}, {
+            app,
+            data: { rows: [], columns: indexedColumns },
+          }),
+        };
       });
 
       const allCells = Object.fromEntries(
-        orderedCells.map((c) => [c.column.alias, c.value]),
+        orderedCells.map((c) => [c.column.alias, c.value])
       );
 
-      orderedCells = orderedCells.map((c, idx) => ({
+      // Inject #known and #prepared into Tags column (for filtering logic)
+      let tags = typeof allCells['Tags'] === 'string' ? allCells['Tags'] : '';
+      const isKnown = Object.values(checkboxStates).some(
+        (v) => v.rowIndex === rowIdx && v.column === 'Known' && v.checked
+      );
+      const isPrepared = Object.values(checkboxStates).some(
+        (v) => v.rowIndex === rowIdx && v.column === 'Prepared' && v.checked
+      );
+
+      if (isKnown && !tags.includes('#known')) tags += ' #known';
+      if (isPrepared && !tags.includes('#prepared')) tags += ' #prepared';
+      allCells['Tags'] = tags.trim();
+
+      const enrichedCells = orderedCells.map((c) => ({
         ...c,
-        formattedValue: indexedColumns[idx].formatter(c.value, allCells, {
-          app,
-          data: { rows, columns: indexedColumns },
-        }),
+        value: c.column.alias === 'Tags' ? allCells['Tags'] : c.value,
+        formattedValue: c.formattedValue, // Do NOT overwrite checkbox with true/false
       }));
 
       return {
         index: rowIdx,
-        orderedCells,
+        orderedCells: enrichedCells,
         ...allCells,
       } as EtDataRow;
     });
 
+    // Sorting
     if (sorting) {
       const sortFn = getSortingFunction(sorting, indexedColumns);
-
       if (sortFn) {
         const sortField = sorting.startsWith('-') ? sorting.slice(1) : sorting;
-
-        rows = rows.sort((a, b) => sortFn(a[sortField], b[sortField]));
+        result.sort((a, b) => sortFn(a[sortField], b[sortField]));
       }
     }
 
+    // Filtering / Searching
     if (filtering.length > 0 || searching) {
-      rows = rows.filter(($row) => {
-        let matchesFilter = true;
+      result = result.filter(($row) => {
+        const matchesFilter = filtering.every((expr) => {
+          try {
+            return Function('$row', `return (${expr})`)($row);
+          } catch {
+            return false;
+          }
+        });
+
         let matchesSearch = true;
-
-        if (filtering.length > 0) {
-          matchesFilter = filtering.every((expr) => {
-            try {
-              return Function('$row', `return (${expr})`)($row);
-            } catch {
-              return false;
-            }
-          });
-        }
-
         if (searching) {
-          const lowercaseSearching = searching.toLocaleLowerCase();
+          const lcSearch = searching.toLocaleLowerCase();
           matchesSearch = $row.orderedCells
             .filter((c) => c.column.searchable)
             .some((c) => {
               if (Array.isArray(c.value)) {
-                return c.value.some((tag) =>
-                  tag.toLocaleLowerCase().includes(lowercaseSearching),
-                );
+                return c.value.some((v) => v.toLocaleLowerCase().includes(lcSearch));
               }
-              return c.value.toLocaleLowerCase().includes(lowercaseSearching);
+              return c.value?.toString().toLocaleLowerCase().includes(lcSearch);
             });
         }
 
@@ -228,42 +223,38 @@ export function useDynamicTablesState(
       });
     }
 
-    setTotalNumberOfUnpaginatedRows(rows.length);
+    setTotalNumberOfUnpaginatedRows(result.length);
 
     if (pagination) {
-      rows = rows.slice(
-        pagination.pageSize! * (pagination.pageNumber! - 1),
-        pagination.pageSize! * pagination.pageNumber!,
+      result = result.slice(
+        pagination.pageSize * (pagination.pageNumber - 1),
+        pagination.pageSize * pagination.pageNumber,
       );
     }
 
-    return rows;
+    return result;
   }, [
     indexOfTheEnhancedTable,
-    searching,
+    app,
     configuration,
     tableData,
     sorting,
     filtering,
+    searching,
     pagination,
     indexedColumns,
-    app,
   ]);
 
   return {
     indexedColumns,
     rows,
-
     pagination,
     onChangePagination,
     totalNumberOfUnpaginatedRows,
-
     filtering,
     setFiltering,
-
     sorting,
     setSorting,
-
     searching,
     setSearching,
   };
