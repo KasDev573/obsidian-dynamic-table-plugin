@@ -3,11 +3,11 @@
  *
  * Responsible for extracting the YAML configuration and associated HTML table from
  * the markdown post-processor element, validating the configuration, and mounting
- * the React component to render the enhanced dynamic table UI.
+ * the React component to render the dynamic table UI.
  *
  * Key functions include:
  * - getMountContext: retrieves and validates YAML config + table, returns context tuple
- * - mountEnhancedTables: mounts the EnhancedTables React component into the DOM
+ * - mountDynamicTables: mounts the DynamicTables React component into the DOM
  * - Utility functions for navigating DOM to find YAML code block and table element
  * - Parsing raw table data for use by the React component
  */
@@ -20,7 +20,7 @@ import {
   ET_YAML_SIGNAL,
 } from 'src/utils/sharedConstants';
 import { EtConfiguration, RawTableData } from 'src/utils/types';
-import { EnhancedTables } from 'src/DynamicTables';
+import { DynamicTables } from 'src/DynamicTables';
 import { createRoot } from 'react-dom/client';
 import React from 'react';
 import { validateConfiguration } from 'src/utils/validation';
@@ -89,7 +89,7 @@ export async function getMountContext(
       const tableData = extractRawTableData(tableEl);
       yamlCodeEl.setAttribute(ET_CONFIGURATION_CODE_EL_ATTRIBUTE, '1');
 
-      const indexOfTheEnhancedTable = Array.from(
+      const indexOfTheDynamicTable = Array.from(
         document.querySelectorAll(`[${ET_CONFIGURATION_CODE_EL_ATTRIBUTE}]`),
       ).indexOf(yamlCodeEl);
       element.setAttribute(ET_CONFIGURATION_CODE_ATTRIBUTE, '1');
@@ -99,42 +99,42 @@ export async function getMountContext(
         configuration,
         tableEl,
         tableData,
-        indexOfTheEnhancedTable,
+        indexOfTheDynamicTable,
       ]);
     }, 0);
   });
 }
 
 /**
- * Mounts the React EnhancedTables component into the DOM, replacing the original
- * HTML table with the enhanced dynamic table. Optionally hides the YAML configuration.
+ * Mounts the React DynamicTables component into the DOM, replacing the original
+ * HTML table with the dynamic table. Optionally hides the YAML configuration.
  *
  * @param app Obsidian App instance
  * @param yamlCodeEl The YAML code block HTMLElement
  * @param configuration Parsed YAML configuration object
  * @param tableEl The HTML table element to replace
  * @param tableData Parsed raw table data from the HTML table
- * @param indexOfTheEnhancedTable Index of the enhanced table instance
+ * @param indexOfTheDynamicTable Index of the dynamic table instance
  */
-export function mountEnhancedTables(
+export function mountDynamicTables(
   app: App,
   yamlCodeEl: HTMLElement,
   configuration: EtConfiguration,
   tableEl: HTMLTableElement,
   tableData: RawTableData,
-  indexOfTheEnhancedTable: number,
+  indexOfTheDynamicTable: number,
 ) {
   // Remove any previously mounted React root for this table index
   Array.from(
     document.querySelectorAll(
-      `div[${ET_RENDER_TABLE_ATTRIBUTE}="${indexOfTheEnhancedTable}"]`,
+      `div[${ET_RENDER_TABLE_ATTRIBUTE}="${indexOfTheDynamicTable}"]`,
     ),
   ).forEach((e) => e.remove());
 
   const rootElement = document.createElement('div');
   rootElement.setAttribute(
     ET_RENDER_TABLE_ATTRIBUTE,
-    indexOfTheEnhancedTable.toString(),
+    indexOfTheDynamicTable.toString(),
   );
   tableEl.after(rootElement);
   tableEl.className = 'dynamic-table-hidden'; // Hide original table from view
@@ -149,13 +149,13 @@ export function mountEnhancedTables(
   const showSearch = configuration.controls?.showSearch ?? true;
   const showFilter = configuration.controls?.showFilter ?? true;
 
-  // Mount React EnhancedTables component
+  // Mount React DynamicTables component
   createRoot(rootElement).render(
-    <EnhancedTables
+    <DynamicTables
       app={app}
       configuration={configuration}
       tableData={tableData}
-      indexOfTheEnhancedTable={indexOfTheEnhancedTable}
+      indexOfTheDynamicTable={indexOfTheDynamicTable}
       showSort={showSort}
       showSearch={showSearch}
       showFilter={showFilter}

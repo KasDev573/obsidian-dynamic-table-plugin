@@ -3,7 +3,7 @@
  *
  * Defines constant values and strings used across the Dynamic Tables plugin.
  * These constants include signals for YAML detection, custom HTML attributes
- * for marking elements related to enhanced tables, and default formatting values
+ * for marking elements related to dynamic tables, and default formatting values
  * for various data types and UI elements such as pagination and boolean displays.
  */
 

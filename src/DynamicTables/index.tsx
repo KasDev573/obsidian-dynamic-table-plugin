@@ -10,7 +10,7 @@
  * - app: Obsidian App instance, used for vault access and UI integration.
  * - configuration: Table configuration and metadata from YAML frontmatter.
  * - tableData: Raw table data extracted from markdown.
- * - indexOfTheEnhancedTable: Index of the table instance on the page.
+ * - indexOfTheDynamicTable: Index of the table instance on the page.
  * - showSort, showSearch, showFilter: Flags to conditionally show UI controls.
  */
 
@@ -32,11 +32,11 @@ type CheckboxMeta = {
   column: string;
 };
 
-type EnhancedTablesProps = {
+type DynamicTablesProps = {
   app: App;
   configuration: EtConfiguration;
   tableData: RawTableData;
-  indexOfTheEnhancedTable: number;
+  indexOfTheDynamicTable: number;
   showSort: boolean;
   showSearch: boolean;
   showFilter: boolean;
@@ -87,11 +87,11 @@ const saveCheckboxStates = (app: App, fileName: string, states: Record<string, C
   }
 };
 
-export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
+export const DynamicTables: React.FC<DynamicTablesProps> = ({
   app,
   configuration,
   tableData,
-  indexOfTheEnhancedTable,
+  indexOfTheDynamicTable,
   showSort,
   showSearch,
   showFilter,
@@ -112,7 +112,7 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
     setSorting,
     searching,
     setSearching,
-  } = useDynamicTablesState(app, configuration, indexOfTheEnhancedTable, tableData);
+  } = useDynamicTablesState(app, configuration, indexOfTheDynamicTable, tableData);
 
   // Effect to render rows and bind cell editors & checkbox state management
   useEffect(() => {
@@ -187,7 +187,7 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
               currentContent,
               row.index,
               modifiedRowValues,
-              indexOfTheEnhancedTable,
+              indexOfTheDynamicTable,
             );
 
             //@ts-ignore
@@ -209,7 +209,7 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
       tbodyRef.current!.appendChild(tr);
     });
   }, [
-    indexOfTheEnhancedTable,
+    indexOfTheDynamicTable,
     app,
     app.workspace,
     configuration,
@@ -267,7 +267,9 @@ export const EnhancedTables: React.FC<EnhancedTablesProps> = ({
                 .map((c, idx) => (
                   <th
                     key={idx}
-                    className={`${c.nowrap ? 'dynamic-table-nowrap' : ''} ${configuration['fix-header'] ? 'dynamic-table-fix-header' : ''}`}
+                    className={`${c.nowrap ? 'dynamic-table-nowrap' : ''} ${
+                      configuration['fix-header'] ? 'dynamic-table-fix-header' : ''
+                    }`}
                     dangerouslySetInnerHTML={{ __html: c.name }}
                   />
                 ))}

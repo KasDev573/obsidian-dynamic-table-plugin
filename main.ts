@@ -3,7 +3,7 @@
  *
  * Responsibilities:
  * - Initialize the plugin and register markdown post-processors to detect
- *   and render enhanced tables with YAML configurations.
+ *   and render dynamic tables with YAML configurations.
  * - Handle file system events (rename/delete) to maintain synchronization
  *   of external JSON files storing checkbox states linked to markdown files.
  * - Provide a settings tab UI to verify plugin activation.
@@ -15,7 +15,7 @@ import { Plugin, PluginSettingTab, App, Setting, Notice, TFile, FileSystemAdapte
 import {
   getMountContext,
   MountContext,
-  mountEnhancedTables,
+  mountDynamicTables,
 } from 'src/utils/mount';
 
 // Handles table-related logic (formatting, data tracking, etc.)
@@ -50,7 +50,7 @@ export default class DynamicTablePlugin extends Plugin {
       if (!possibleMountContext) return;
 
       if (isError(possibleMountContext)) {
-        const errorsContainer = el.createDiv({ cls: 'enhanced-tables-errors' });
+        const errorsContainer = el.createDiv({ cls: 'dynamic-tables-errors' });
         errorsContainer.createDiv({
           text: `⚠️ Validation errors:`,
           cls: 'dynamic-tables-error',
@@ -67,17 +67,17 @@ export default class DynamicTablePlugin extends Plugin {
         configuration,
         tableEl,
         tableData,
-        indexOfTheEnhancedTable,
+        indexOfTheDynamicTable,
       ] = possibleMountContext as MountContext;
 
       setTimeout(() => {
-        mountEnhancedTables(
+        mountDynamicTables(
           this.app,
           yamlCodeEl,
           configuration,
           tableEl,
           tableData,
-          indexOfTheEnhancedTable,
+          indexOfTheDynamicTable,
         );
       }, 300);
     }, 1);

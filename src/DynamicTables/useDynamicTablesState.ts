@@ -82,14 +82,14 @@ function loadCheckboxStates(app: App, fileName: string): Record<string, Checkbox
  * Main hook that manages the table state and logic.
  * @param app Obsidian app instance
  * @param configuration Table configuration object
- * @param indexOfTheEnhancedTable Index of the current table instance on the page
+ * @param indexOfTheDynamicTable Index of the current table instance on the page
  * @param tableData Raw data extracted from the markdown table
  * @returns An object containing state and state setters for rendering and interaction
  */
 export function useDynamicTablesState(
   app: App,
   configuration: EtConfiguration,
-  indexOfTheEnhancedTable: number,
+  indexOfTheDynamicTable: number,
   tableData: RawTableData,
 ) {
   // State for sorting, filtering, searching, and pagination
@@ -169,7 +169,7 @@ export function useDynamicTablesState(
 
     const currentContent = app.workspace.getActiveViewOfType(MarkdownView)?.data ?? '';
     const tableManager = new TableManager();
-    const rawTableLines = tableManager.readTableLines(currentContent, indexOfTheEnhancedTable);
+    const rawTableLines = tableManager.readTableLines(currentContent, indexOfTheDynamicTable);
 
     const fileName = app.workspace.getActiveFile()?.basename ?? 'default';
     const adapter = app.vault.adapter as FileSystemAdapter;
@@ -316,7 +316,7 @@ export function useDynamicTablesState(
 
     return result;
   }, [
-    indexOfTheEnhancedTable,
+    indexOfTheDynamicTable,
     app,
     configuration,
     tableData,
