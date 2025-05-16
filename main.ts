@@ -1,4 +1,4 @@
-import { Plugin, PluginSettingTab, App, Setting, Notice } from 'obsidian';
+import { Plugin, PluginSettingTab, App, Setting, Notice, TFile, FileSystemAdapter } from 'obsidian';
 
 // Utility to retrieve and validate the table-related context from a markdown block
 import {
@@ -9,6 +9,10 @@ import {
 
 // Handles table-related logic (formatting, data tracking, etc.)
 import { TableManager } from 'src/TableManager';
+
+// Import Node.js 'fs' and 'path' for file system operations
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Helper function to identify if something went wrong while getting context
 function isError(possibleMountContext: any): possibleMountContext is string {
@@ -64,10 +68,59 @@ export default class DynamicTablePlugin extends Plugin {
         );
       }, 300);
     }, 1); // Post-processor priority
+
+    // Register vault event listener for file renames
+    this.registerEvent(
+      this.app.vault.on('rename', this.onFileRename.bind(this))
+    );
   }
 
   onunload() {
     console.log("Dynamic Tables plugin unloaded.");
+  }
+
+  /**
+   * Handler for vault file rename events
+   * @param file - The file that was renamed (TFile)
+   * @param oldPath - The old path of the file before rename
+   */
+  async onFileRename(file: TFile, oldPath: string) {
+    try {
+      const basePath = this.getVaultBasePath();
+      if (!basePath) return;
+
+      // Only process markdown files
+      if (file.extension !== 'md') return;
+
+      const statesDir = path.join(basePath, '_checkbox-states');
+      if (!fs.existsSync(statesDir)) return;
+
+      const oldFileName = path.basename(oldPath, '.md');
+      const newFileName = file.basename;
+
+      const oldStateFilePath = path.join(statesDir, `${oldFileName}.json`);
+      const newStateFilePath = path.join(statesDir, `${newFileName}.json`);
+
+      // If the old checkbox state file exists, rename it to new filename
+      if (fs.existsSync(oldStateFilePath)) {
+        await fs.promises.rename(oldStateFilePath, newStateFilePath);
+        console.log(`[DynamicTables] Renamed checkbox state file: ${oldStateFilePath} -> ${newStateFilePath}`);
+      }
+    } catch (error) {
+      console.error('[DynamicTables] Error renaming checkbox state file:', error);
+    }
+  }
+
+  /**
+   * Helper to get the vault base path (folder containing your notes)
+   */
+  getVaultBasePath(): string | null {
+    const adapter = this.app.vault.adapter;
+    // Use instanceof to check for FileSystemAdapter and safely call getBasePath()
+    if (adapter instanceof FileSystemAdapter) {
+      return adapter.getBasePath();
+    }
+    return null;
   }
 }
 
