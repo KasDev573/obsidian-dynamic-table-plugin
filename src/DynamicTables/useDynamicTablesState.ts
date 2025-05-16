@@ -160,20 +160,25 @@ export function useDynamicTablesState(
         orderedCells.map((c) => [c.column.alias, c.value])
       );
 
-      // Inject 'checked' into the same column as the checkbox if checked
+      // Inject 'true' into the same column as the checkbox if checked
+      // Inject 'false' into the same column as the checkbox if unchecked
       Object.values(checkboxStates).forEach((meta) => {
-        if (meta.rowIndex === rowIdx && meta.checked) {
+        if (meta.rowIndex === rowIdx) {
           const colName = meta.column;
           const currentValue = allCells[colName];
+
+          const valueToInject = meta.checked ? 'true' : 'false';
+
           if (typeof currentValue === 'string') {
-            if (!currentValue.includes('checked')) {
-              allCells[colName] = `${currentValue} checked`;
+            if (!currentValue.includes(valueToInject)) {
+              allCells[colName] = `${currentValue} ${valueToInject}`.trim();
             }
           } else {
-            allCells[colName] = 'checked';
+            allCells[colName] = valueToInject;
           }
         }
       });
+
 
       const enrichedCells = orderedCells.map((c) => ({
         ...c,
