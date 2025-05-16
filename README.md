@@ -213,3 +213,22 @@ function readLine(fileContent: string, lineNo: number, tableIndex = 0): LineValu
 // Returns all the values of the table in the provided fileContent with
 function readTableLines(fileContent: string, tableIndex = 0): LineValues | null {}
 ```
+===============================================
+
+🛑 What happens if there isn't a column named Tags?
+
+    The injection logic would silently fail or be skipped
+
+    Your filters like $row.Tags?.includes('#columnName') would return false or error
+
+    Your checkboxes would still work visually, but the tag-based filtering would break
+
+    Thankfully you can set the Tags column visibility so it isn't an eyesore but serves a function
+
+    Tags:
+    alias: Tags
+    type: string
+    searchable: true
+    hidden: false <------- That last line is what makes it not show in reading view
+
+    The Above is necessary if you want filtering logic to filter checkboxes that have been checked
