@@ -1,3 +1,44 @@
+# Dynamic Table Plugin for Obsidian
+
+A powerful and customizable dynamic table plugin for Obsidian that expands the [obsidian-enhanced-tables plugin](https://github.com/pistacchio/obsidian-enhanced-tables)
+
+This plugin is an updated and extended version based on the original **Enhanced Tables** plugin by [pistacchio](https://github.com/pistacchio). Without their effort I would not have been able to get started on their work, I cannot thank them enough for their original work.
+
+# Whats new?
+1) Any functionality stacks. Meaning that you can sort by column title, the ascending/descending entries while having multiple filters active and being able to search to narrow things down even further all at the same time!
+2) Checkboxes in Obsidian can be problematic especially with YAML, the best I found for some time was in [obsidian-table-checkboxes](https://github.com/0x-DLN/obsidian-table-checkboxes) with example `<input type="checkbox" unchecked id="cfa0fe">`, if you clicked their checkbox `<input type="checkbox" checked id="cfa0fe">` it would save the state in the markdown. However, with YAML and the enhanced table plugin, this would break the functionality, causing you to need to reload each time, which was not ideal. Now there is this: `<input type="checkbox" id="cfa0fe">` for this format instead I made a script that will export to a folder called '_checkbox-states' inside of your vault folder. This will save the states of those checkboxes externally to a JSON file without breaking the UI! This was necessary because the id format without checked or unchecked doesn't break the controls but also doesn't save if they have been checked for future sessions, hence my script. Also, I did make it so if you update your file name or delete your file it will adjust the appropriate JSON file as well. (If you edit the file name refresh the document before checking boxes just to be safe)
+3) I made it so you could filter a column by whether or not a checkbox was checked or unchecked, it must be '.includes' true or false for checked or unchecked boxes. Example below: (note the formatting for the filter, the only things to be changed are columnTitle to your column name, leave the ?, and also the headername to desired header and example to desired filter name)
+
+``` 
+filters:
+  Headername:
+    Example: "$row.columnTitle?.includes('true')"
+  OtherHeaderName:
+    Example2: "$row.columnTitle?.includes('false')"
+```
+
+4) You may have noticed above with Headername: and OtherHeaderName:, I made it so you could have filter headers that appear above your grouped filters. This was for people who have lots of filters and wanted an easier time visually.
+5) I made it so you could control the UI view, whether or not you want the Sort, Search, or Filter sections to appear with a YAML config! Check below: (true = visible, false = not visible)
+
+```
+controls:
+  showSort: true
+  showSearch: true
+  showFilter: true
+```
+### Community Plugin
+- Open Settings > Third-party plugin
+- Make sure Safe mode is off
+- Click Browse community plugins
+- Search for "Dynamic Table Plugin"
+- Click Install
+- Once installed, close the community plugins window and activate the newly installed plugin
+
+--- 
+
+# Enhanced Tables instruction down below:
+I left this hear for the sake of ease of understanding the full scope of the functions related to the original project. Again I would like to thank [pistacchio](https://github.com/pistacchio) for their original work on [obsidian-enhanced-tables plugin](https://github.com/pistacchio/obsidian-enhanced-tables). I would not have been able to do this if not for them.
+
 # Enhanced tables
 
 A plugin for [Obsidian](https://obsidian.md/) to add advanced controls (like sorting, filtering and pagination) to standard markup tables.
@@ -213,22 +254,3 @@ function readLine(fileContent: string, lineNo: number, tableIndex = 0): LineValu
 // Returns all the values of the table in the provided fileContent with
 function readTableLines(fileContent: string, tableIndex = 0): LineValues | null {}
 ```
-===============================================
-
-🛑 What happens if there isn't a column named Tags?
-
-    The injection logic would silently fail or be skipped
-
-    Your filters like $row.Tags?.includes('#columnName') would return false or error
-
-    Your checkboxes would still work visually, but the tag-based filtering would break
-
-    Thankfully you can set the Tags column visibility so it isn't an eyesore but serves a function
-
-    Tags:
-    alias: Tags
-    type: string
-    searchable: true
-    hidden: false <------- That last line is what makes it not show in reading view
-
-    The Above is necessary if you want filtering logic to filter checkboxes that have been checked
