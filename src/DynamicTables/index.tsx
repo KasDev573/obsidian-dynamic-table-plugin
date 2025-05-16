@@ -33,7 +33,7 @@ const getVaultBasePath = (app: App): string | null => {
 
 const getStateFilePath = (app: App, fileName: string): string | null => {
   const base = getVaultBasePath(app);
-  return base ? path.join(base, '.checkbox-states', `${fileName}.json`) : null;
+  return base ? path.join(base, '_checkbox-states', `${fileName}.json`) : null;
 };
 
 const loadCheckboxStates = (app: App, fileName: string): Record<string, CheckboxMeta> => {
@@ -54,7 +54,7 @@ const saveCheckboxStates = (app: App, fileName: string, states: Record<string, C
     const base = getVaultBasePath(app);
     if (!base) return;
 
-    const dirPath = path.join(base, '.checkbox-states');
+    const dirPath = path.join(base, '_checkbox-states');
     if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath);
 
     const filePath = path.join(dirPath, `${fileName}.json`);
