@@ -15,7 +15,6 @@ import {
   App,
   Setting,
   TFile,
-  FileSystemAdapter,
   ButtonComponent,
 } from 'obsidian';
 
@@ -129,7 +128,11 @@ export default class DynamicTablePlugin extends Plugin {
 
   getVaultBasePath(): string | null {
     const adapter = this.app.vault.adapter;
-    return adapter instanceof FileSystemAdapter ? adapter.getBasePath() : null;
+    // Only return base path if getBasePath function exists (desktop)
+    if ('getBasePath' in adapter && typeof (adapter as any).getBasePath === 'function') {
+      return (adapter as any).getBasePath();
+    }
+    return null;
   }
 }
 
