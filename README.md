@@ -34,6 +34,46 @@ controls:
 - Click Install
 - Once installed, close the community plugins window and activate the newly installed plugin
 
+# Example of my YAML and Table
+If you want to copy the YAML or Table, check the Dynamic Table plugin settings
+### YAML Example
+```yaml dynamic-table
+columns:
+  Column A:
+    alias: Column A
+    type: string
+    searchable: true
+  Column B:
+    alias: Column B
+    type: string
+    searchable: true
+  Column C:
+    alias: Column C
+    type: string
+    searchable: true
+
+filters:
+  Example Header 1:
+    Column A: "$row['Column A']?.includes('true')"
+    Column B: "$row['Column B']?.includes('false')"
+
+controls:
+  showSort: true
+  showSearch: true
+  showFilter: true
+
+hide-configuration: true
+```
+## Table Example
+```
+| Column A                            | Column B                            | Column C |
+| ----------------------------------- | ----------------------------------- | -------- |
+| <input type="checkbox" id="68aad5"> | <input type="checkbox" id="2b6727"> | Text1    |
+| <input type="checkbox" id="f797ca"> | <input type="checkbox" id="143b85"> | Text2    |
+| <input type="checkbox" id="c545ad"> | <input type="checkbox" id="e04729"> | Text3    |
+| <input type="checkbox" id="a8b8d4"> | <input type="checkbox" id="c9ec42"> | Text4    |
+```
+
 --- 
 
 # Enhanced Tables instruction down below:
@@ -43,7 +83,7 @@ I left this hear for the sake of ease of understanding the full scope of the fun
 
 A plugin for [Obsidian](https://obsidian.md/) to add advanced controls (like sorting, filtering and pagination) to standard markup tables.
 
-Its is heavily inspired by [DataLoom](https://dataloom.xyz/) which is an incredible plugin, but I wanted my data to be stored in simple, easily accessible and editable tables, and not in JSON files which integrate in a less seamless way into the Obsidian workflow. 
+Its is heavily inspired by [DataLoom](https://dataloom.xyz/) which is an incredible plugin, but I wanted my data to be stored in simple, easily accessible and editable tables, and not in JSON files which integrate in a less seamless way into the Obsidian workflow.
 
 ## Example
 

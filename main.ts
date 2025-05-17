@@ -154,7 +154,7 @@ class DynamicTablesSettingTab extends PluginSettingTab {
     // YAML block with copy button
     containerEl.createEl("h3", { text: "Example YAML Configuration" });
     const yamlContainer = containerEl.createDiv();
-    const yamlText = `yaml dynamic-table
+    const yamlText = `\`\`\`yaml dynamic-table
 columns:
   Column A:
     alias: Column A
@@ -179,7 +179,8 @@ controls:
   showSearch: true
   showFilter: true
 
-hide-configuration: true`;
+hide-configuration: true
+\`\`\``;
 
     const copyYamlBtn = yamlContainer.createEl("button", { text: "Copy YAML" });
     copyYamlBtn.onclick = async () => {
