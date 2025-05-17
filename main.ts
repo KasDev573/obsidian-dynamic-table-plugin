@@ -188,6 +188,10 @@ controls:
   showSearch: true
   showFilter: true
 
+styleEnhancements:
+  zebraStriping: true
+  rowHoverHighlight: true
+
 hide-configuration: true
 \`\`\``;
 

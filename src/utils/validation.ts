@@ -52,9 +52,9 @@ export const VALIDATION_JSON_SCHEMA = {
       type: 'object',
       additionalProperties: {
         anyOf: [
-          { type: 'string' },               // Filters can be string expressions...
+          { type: 'string' },
           {
-            type: 'object',                 // ...or objects mapping strings to strings
+            type: 'object',
             additionalProperties: { type: 'string' },
           },
         ],
@@ -78,7 +78,7 @@ export const VALIDATION_JSON_SCHEMA = {
     columns: {
       type: 'object',
       propertyNames: {
-        pattern: '^.*$',                   // Column keys can be any string
+        pattern: '^.*$',
       },
       additionalProperties: {
         type: 'object',
@@ -147,6 +147,14 @@ export const VALIDATION_JSON_SCHEMA = {
         showFilter: { type: 'boolean' },
       },
       additionalProperties: false,
+    },
+    styleEnhancements: {
+      type: 'object',
+      properties: {
+        zebraStriping: { type: 'boolean' },
+        rowHoverHighlight: { type: 'boolean' }
+      },
+      additionalProperties: false
     },
   },
   additionalProperties: false,

@@ -108,6 +108,9 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
     setSearching,
   } = useDynamicTablesState(app, configuration, indexOfTheDynamicTable, tableData);
 
+  const zebraStriping = configuration.styleEnhancements?.zebraStriping;
+  const rowHoverHighlight = configuration.styleEnhancements?.rowHoverHighlight;
+
   useEffect(() => {
     if (!tbodyRef.current) return;
     tbodyRef.current.textContent = '';
@@ -118,6 +121,13 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
     rows.forEach((row) => {
       const tr = document.createElement('tr');
       tr.setAttribute('data-dt-row', row.index.toString());
+
+      if (zebraStriping) {
+        tr.classList.add('dt-zebra');
+      }
+      if (rowHoverHighlight) {
+        tr.classList.add('dt-hover-highlight');
+      }
 
       const currentContent = app.workspace.getActiveViewOfType(MarkdownView)?.data ?? '';
       const tableManager = new TableManager();
@@ -187,26 +197,48 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
     configuration,
     rows,
     tableData.rowDirections,
+    zebraStriping,
+    rowHoverHighlight,
   ]);
 
-  const style = useMemo<string | undefined>(() => {
-    if (!configuration.style) return undefined;
+  const style = useMemo(() => {
+    let styleText = ``;
 
-    try {
-      const customCss = css.parse(configuration.style);
-      customCss?.stylesheet?.rules.forEach((r) => {
-        if ('selectors' in r) r.selectors = r.selectors?.map((s) => `& ${s}`);
-      });
-
-      return `
-        .dynamic-table {
-          ${css.stringify(customCss)}
+    if (zebraStriping) {
+      styleText += `
+        .dynamic-table tr.dt-zebra-even {
+          background-color: var(--background-modifier-hover);
         }
       `;
-    } catch (e) {
-      return undefined;
     }
-  }, [configuration.style]);
+
+    if (rowHoverHighlight) {
+      styleText += `
+        .dynamic-table tr.dt-hover-highlight:hover {
+          background-color: var(--background-secondary-alt);
+        }
+      `;
+    }
+
+    if (configuration.style) {
+      try {
+        const customCss = css.parse(configuration.style);
+        customCss?.stylesheet?.rules.forEach((r) => {
+          if ('selectors' in r) r.selectors = r.selectors?.map((s) => `& ${s}`);
+        });
+
+        styleText += `
+          .dynamic-table {
+            ${css.stringify(customCss)}
+          }
+        `;
+      } catch (e) {
+        console.warn('Failed to parse user custom style in configuration.style');
+      }
+    }
+
+    return styleText.length > 0 ? styleText : undefined;
+  }, [configuration.style, zebraStriping, rowHoverHighlight]);
 
   return (
     <div className="dynamic-table">
@@ -242,7 +274,6 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
               ))}
             </tr>
           </thead>
-
           <tbody ref={tbodyRef}></tbody>
         </table>
       </div>

@@ -7,6 +7,7 @@
  * - Sorting and pagination
  * - Search and filter logic (with debounce for performance)
  * - External checkbox state persistence (loaded/saved from local file)
+ * - Optional style flags from YAML for striped and hover-enabled rows
  */
 
 import {
@@ -43,14 +44,12 @@ import { TableManager } from 'src/TableManager';
 import fs from 'fs';
 import path from 'path';
 import { useDebounce } from 'src/utils/useDebounce';
+import { CheckboxMeta } from 'src/utils/types';
+
 
 // Type definition for saved checkbox state metadata
 // Used to persist checkbox values independently of markdown
-type CheckboxMeta = {
-  checked: boolean;
-  rowIndex: number;
-  column: string;
-};
+// Includes 'checked' value, row index, and column name
 
 // Load persisted checkbox states from file
 function loadCheckboxStates(app: App, fileName: string): Record<string, CheckboxMeta> {
@@ -82,20 +81,17 @@ function createFilterFunctionCache(expressions: string[]) {
   return cache;
 }
 
-// Main hook
 export function useDynamicTablesState(
   app: App,
   configuration: EtConfiguration,
   indexOfTheDynamicTable: number,
   tableData: RawTableData,
 ) {
-  // Sorting, filtering, and debounced searching state
   const [sorting, setSorting] = useState<string | null>(configuration.sort ?? null);
   const [filtering, setFiltering] = useState<string[]>([]);
   const [searching, setSearching] = useState<string | null>(null);
   const debouncedSearch = useDebounce(searching, 200);
 
-  // Pagination configuration state
   const [pagination, setPagination] = useState<Pagination | null>(() => {
     if (configuration.pagination) {
       const pageSize = configuration.pagination['page-size'] ?? DEFAULT_PAGE_SIZE;
@@ -112,12 +108,11 @@ export function useDynamicTablesState(
   const [totalNumberOfUnpaginatedRows, setTotalNumberOfUnpaginatedRows] =
     useState<number>(tableData.rows.length);
 
-  // Pagination change handler
   const onChangePagination = useCallback((p: PaginationOptions) => {
     setPagination((pagination) => ({ ...pagination, ...p }) as Pagination);
   }, []);
 
-  // Process and format table columns with memoization
+  // Memoized columns config
   const indexedColumns = useMemo<EtDataColumn[]>(() => {
     return tableData.columns.map((columnName, index) => {
       const columnConfiguration = (configuration.columns?.[columnName] ?? {}) as EtConfigurationColumn;
@@ -151,7 +146,7 @@ export function useDynamicTablesState(
     });
   }, [tableData.columns, configuration.columns, configuration.editable]);
 
-  // Process and filter all rows based on config and current states
+  // Memoized processing of rows
   const rows = useMemo<EtDataRow[]>(() => {
     const dateFormat = configuration['date-format'] ?? DEFAULT_DATE_FORMAT;
     const datetimeFormat = configuration['datetime-format'] ?? DEFAULT_DATE_TIME_FORMAT;
@@ -250,7 +245,6 @@ export function useDynamicTablesState(
       };
     });
 
-    // Persist new checkbox state if modified
     if (updated && filePath) {
       try {
         fs.writeFileSync(filePath, JSON.stringify(checkboxStates, null, 2));
@@ -259,7 +253,6 @@ export function useDynamicTablesState(
       }
     }
 
-    // Apply filters and search
     const filterFns = createFilterFunctionCache(filtering);
     const lcSearch = debouncedSearch?.toLowerCase() ?? '';
 
@@ -276,7 +269,6 @@ export function useDynamicTablesState(
       });
     }
 
-    // Apply sorting
     if (sorting) {
       const sortFn = getSortingFunction(sorting, indexedColumns);
       if (sortFn) {
@@ -287,7 +279,6 @@ export function useDynamicTablesState(
 
     setTotalNumberOfUnpaginatedRows(result.length);
 
-    // Apply pagination
     if (pagination) {
       result = result.slice(
         pagination.pageSize * (pagination.pageNumber - 1),
@@ -308,7 +299,6 @@ export function useDynamicTablesState(
     indexedColumns,
   ]);
 
-  // Hook return values
   return {
     indexedColumns,
     rows,

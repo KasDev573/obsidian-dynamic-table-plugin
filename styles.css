@@ -158,3 +158,16 @@
     }
   }
 }
+
+/* Zebra striping: alternate background for every other row */
+.dynamic-table tbody tr:nth-child(even).dt-zebra {
+  background-color: var(--background-secondary);
+}
+
+/* Hover effect: all rows with this class should react on hover */
+.dynamic-table tbody tr.dt-hover-highlight:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+
+

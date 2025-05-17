@@ -51,9 +51,11 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
   showFilter,
 }) => {
   /**
-   * Memoized processing of the filters configuration from YAML,
-   * grouping filters when nested objects are present.
+   * ✅ NEW: Extract style enhancements to potentially modify control container styles
    */
+  const zebraStriping = configuration.styleEnhancements?.zebraStriping;
+  const rowHoverHighlight = configuration.styleEnhancements?.rowHoverHighlight;
+
   const filters = useMemo<GroupedFiltersConfiguration>(() => {
     const raw = configuration.filters ?? {};
     const result: GroupedFiltersConfiguration = {};
@@ -70,18 +72,11 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
     return result;
   }, [configuration.filters]);
 
-  /**
-   * Checks if any columns are searchable to conditionally render
-   * the search input.
-   */
   const searchable = useMemo(
     () => columns.some((c) => c.searchable),
     [columns],
   );
 
-  /**
-   * Handles addition of a new filter value to the active filtering list.
-   */
   const handleFilterChange = (evt: React.ChangeEvent<HTMLSelectElement>) => {
     const value = evt.target.value;
     if (!filtering.includes(value)) {
@@ -89,27 +84,18 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
     }
   };
 
-  /**
-   * Handles removal of a filter value from the active filtering list.
-   */
   const handleRemoveFilter = (value: string) => {
     setFiltering(filtering.filter((f) => f !== value));
   };
 
-  // State for tracking sort order (ascending/descending)
   const [sortOrder, setSortOrder] = useState<string>(
     (sorting ?? '').startsWith('-') ? DESC : ASC
   );
 
-  // State for the currently selected sort column/key
   const [innerSorting, setInnerSorting] = useState<string>(
     sorting ? sorting.replace(/^-/, '') : NONE_SELECTED_SIGNAL
   );
 
-  /**
-   * Effect hook to propagate sorting changes upwards based on
-   * inner sorting and order states.
-   */
   useEffect(() => {
     if (innerSorting === NONE_SELECTED_SIGNAL) {
       setSorting(null);
@@ -120,7 +106,7 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
 
   return (
     <div
-      className="dynamic-table-controls"
+      className={`dynamic-table-controls ${zebraStriping ? 'dt-controls-zebra' : ''} ${rowHoverHighlight ? 'dt-controls-highlight-on-hover' : ''}`}
       style={{
         display: 'flex',
         flexWrap: 'wrap',
@@ -129,7 +115,6 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
         marginBottom: '1rem',
       }}
     >
-      {/* Conditionally render Sort Section */}
       {showSort && (
         <div className="sorting" style={{ display: 'flex', flexDirection: 'column' }}>
           <label style={{ fontSize: '1.1em', fontWeight: 'bold', marginBottom: '0.3em' }}>Sort</label>
@@ -169,7 +154,6 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
         </div>
       )}
 
-      {/* Conditionally render Search Section */}
       {showSearch && searchable && (
         <div className="searching" style={{ display: 'flex', flexDirection: 'column' }}>
           <label style={{ fontSize: '1.1em', fontWeight: 'bold', marginBottom: '0.3em' }}>Search</label>
@@ -187,7 +171,6 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
         </div>
       )}
 
-      {/* Conditionally render Filter Section */}
       {showFilter && Object.keys(filters).length > 0 && (
         <div className="filtering" style={{ display: 'flex', flexDirection: 'column' }}>
           <label style={{ fontSize: '1.1em', fontWeight: 'bold', marginBottom: '0.3em' }}>Filter</label>
@@ -214,7 +197,6 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
               ))}
             </select>
 
-            {/* Render active filters with a remove button */}
             {filtering.map((f, idx) => {
               const label =
                 Object.values(filters)

@@ -64,6 +64,12 @@ export type EtConfiguration = {
     showSearch?: boolean;
     showFilter?: boolean;
   };
+
+  // UI styling enhancements such as zebra striping and hover effects
+  styleEnhancements?: {
+    zebraStriping?: boolean;
+    rowHoverHighlight?: boolean;
+  };
 };
 
 // Configuration for a single column in the table
@@ -128,3 +134,10 @@ export type EtDataRow = {
   cells: Record<string, EtDataCell>; // Map of cells keyed by column name
   orderedCells: EtDataCell[];   // Array of cells in column order
 } & Record<string, any>;        // Allow additional arbitrary properties for convenience
+
+// Metadata for checkbox state persistence
+export type CheckboxMeta = {
+  checked: boolean;
+  rowIndex: number;
+  column: string;
+};
