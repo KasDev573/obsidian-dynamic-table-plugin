@@ -183,7 +183,7 @@ export function useDynamicTablesState(
         const raw = rawTableLines?.[rowIdx + 2]?.[cellIdx] ?? '';
         const isCheckbox = raw.includes('type="checkbox"');
         if (isCheckbox) {
-          const match = raw.match(/id="([^\"]+)"/);
+          const match = raw.match(/id="([^"]+)"/);
           const checkboxId = match?.[1];
           const isChecked = raw.includes('checked');
 
