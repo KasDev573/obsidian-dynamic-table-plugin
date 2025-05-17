@@ -24,6 +24,7 @@ export type RawTableData = {
 export type CellValueFormatter = (cell: any, row: any, ctx: any) => any;
 
 export type TextAlignment = 'left' | 'center' | 'right';
+export type VerticalAlignment = 'top' | 'center' | 'bottom';
 
 // Allowed types for columns in the table configuration
 export type EtConfigurationColumnType =
@@ -72,6 +73,7 @@ export type EtConfiguration = {
     zebraStriping?: boolean;
     rowHoverHighlight?: boolean;
     horizontalTextAlignment?: TextAlignment;
+    verticalTextAlignment?: VerticalAlignment;
   };
 };
 

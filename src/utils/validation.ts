@@ -156,6 +156,10 @@ export const VALIDATION_JSON_SCHEMA = {
         horizontalTextAlignment: {
               type: 'string',
               enum: ['left', 'center', 'right']
+        },
+        verticalTextAlignment: {
+          type: 'string',
+          enum: ['top', 'center', 'bottom']
         }
       },
       additionalProperties: false
