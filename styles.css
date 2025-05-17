@@ -6,6 +6,16 @@
  * and responsive behavior on smaller screens.
  */
 
+/* Code blocks for YAML and table examples in the settings tab */
+.dynamic-tables-code-block {
+  white-space: pre-wrap;
+  border: 1px solid var(--background-modifier-border);
+  padding: 0.75em;
+  border-radius: 8px;
+  background-color: var(--background-secondary-alt);
+  font-size: 0.85em;
+}
+
 /* Container and scroll for the table */
 .dynamic-table {
   & .table-container {

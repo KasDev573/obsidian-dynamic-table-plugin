@@ -200,14 +200,10 @@ hide-configuration: true
       }
     };
 
-    const yamlBlock = yamlContainer.createEl("pre");
+    const yamlBlock = yamlContainer.createEl("pre", {
+      cls: "dynamic-tables-code-block"
+    });
     yamlBlock.textContent = yamlText;
-    yamlBlock.style.whiteSpace = "pre-wrap";
-    yamlBlock.style.border = "1px solid var(--background-modifier-border)";
-    yamlBlock.style.padding = "0.75em";
-    yamlBlock.style.borderRadius = "8px";
-    yamlBlock.style.backgroundColor = "var(--background-secondary-alt)";
-    yamlBlock.style.fontSize = "0.85em";
 
     // Markdown Table code block with copy button
     containerEl.createEl("h3", { text: "Example Markdown Table" });
@@ -231,13 +227,9 @@ hide-configuration: true
       }
     };
 
-    const markdownTableBlock = markdownTableContainer.createEl("pre");
+    const markdownTableBlock = markdownTableContainer.createEl("pre", {
+      cls: "dynamic-tables-code-block"
+    });
     markdownTableBlock.textContent = markdownTableText;
-    markdownTableBlock.style.whiteSpace = "pre-wrap";
-    markdownTableBlock.style.border = "1px solid var(--background-modifier-border)";
-    markdownTableBlock.style.padding = "0.75em";
-    markdownTableBlock.style.borderRadius = "8px";
-    markdownTableBlock.style.backgroundColor = "var(--background-secondary-alt)";
-    markdownTableBlock.style.fontSize = "0.85em";
   }
 }
