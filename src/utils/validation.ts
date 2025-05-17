@@ -145,6 +145,7 @@ export const VALIDATION_JSON_SCHEMA = {
         showSort: { type: 'boolean' },
         showSearch: { type: 'boolean' },
         showFilter: { type: 'boolean' },
+        stickyHeader: { type: 'boolean' },
       },
       additionalProperties: false,
     },

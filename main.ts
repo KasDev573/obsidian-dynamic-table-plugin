@@ -187,6 +187,7 @@ controls:
   showSort: true
   showSearch: true
   showFilter: true
+  stickyHeader: true
 
 styleEnhancements:
   zebraStriping: true

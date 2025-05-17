@@ -169,5 +169,23 @@
   background-color: var(--background-modifier-hover);
 }
 
+/* Header Sticky Effect: Make header scroll with you */
+.dynamic-table-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--background-primary); /* Solid background across entire row */
+  opacity: 1 !important;
+}
 
+.dynamic-table-sticky-header th {
+  background-color: inherit; /* Inherit the full bar's background */
+  border-bottom: 1px solid var(--background-modifier-border);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dynamic-table-scroll-container {
+  max-height: 1200px;
+  overflow-y: auto;
+}
 

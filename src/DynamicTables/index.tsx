@@ -113,6 +113,7 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
   const horizontalTextAlignment = configuration.styleEnhancements?.horizontalTextAlignment ?? 'left';
   const rawVAlign = configuration.styleEnhancements?.verticalTextAlignment ?? 'top';
   const verticalTextAlignment = rawVAlign === 'center' ? 'middle' : rawVAlign;
+  const stickyHeader = configuration.controls?.stickyHeader ?? false;
 
 
 
@@ -269,9 +270,9 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
         />
       )}
 
-      <div className="table-container">
+      <div className={`table-container ${stickyHeader ? 'dynamic-table-scroll-container' : ''}`}>
         <table>
-          <thead>
+          <thead className={stickyHeader ? 'dynamic-table-sticky-header' : ''}>
             <tr>
               {indexedColumns.filter((c) => !c.hidden).map((c, idx) => (
                 <th

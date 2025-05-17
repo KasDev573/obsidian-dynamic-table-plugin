@@ -62,10 +62,12 @@ export type EtConfiguration = {
   'fix-header'?: boolean;
 
   // UI control toggles to show/hide sort, search, filter controls
+  // UI control to allow header to follow as you scroll down
   controls?: {
     showSort?: boolean;
     showSearch?: boolean;
     showFilter?: boolean;
+    stickyHeader?: boolean;
   };
 
   // UI styling enhancements such as zebra striping and hover effects
