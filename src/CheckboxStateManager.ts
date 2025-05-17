@@ -29,7 +29,8 @@ export class CheckboxStateManager {
    */
   private async getStorageFilePath(file: TFile): Promise<string> {
     const baseName = file.path.replace(/\//g, '__').replace(/\.md$/, '');
-    return `.obsidian/plugins/dynamic-table-plugin/data/states/${baseName}.json`;
+    const configDir = this.app.vault.configDir;
+    return `${configDir}/plugins/dynamic-table-plugin/data/states/${baseName}.json`;
   }
 
   /**
