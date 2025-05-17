@@ -110,6 +110,7 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
 
   const zebraStriping = configuration.styleEnhancements?.zebraStriping;
   const rowHoverHighlight = configuration.styleEnhancements?.rowHoverHighlight;
+  const horizontalTextAlignment = configuration.styleEnhancements?.horizontalTextAlignment ?? 'left';
 
   useEffect(() => {
     if (!tbodyRef.current) return;
@@ -134,6 +135,7 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
 
       row.orderedCells.filter((c) => !c.column.hidden).forEach((cell, idx2) => {
         const td = document.createElement('td');
+        td.style.textAlign = horizontalTextAlignment;
         td.setAttribute('data-dt-cell', idx2.toString());
         td.setAttribute('data-dt-row-cell', `${row.index}-${idx2}`);
 
@@ -199,6 +201,7 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
     tableData.rowDirections,
     zebraStriping,
     rowHoverHighlight,
+    horizontalTextAlignment,
   ]);
 
   const style = useMemo(() => {
@@ -267,6 +270,7 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
               {indexedColumns.filter((c) => !c.hidden).map((c, idx) => (
                 <th
                   key={idx}
+                  style={{ textAlign: horizontalTextAlignment }}
                   className={`${c.nowrap ? 'dynamic-table-nowrap' : ''} ${configuration['fix-header'] ? 'dynamic-table-fix-header' : ''}`}
                 >
                   {c.name}

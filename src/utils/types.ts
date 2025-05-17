@@ -23,6 +23,8 @@ export type RawTableData = {
 // taking the raw cell, the whole row, and a context object as inputs
 export type CellValueFormatter = (cell: any, row: any, ctx: any) => any;
 
+export type TextAlignment = 'left' | 'center' | 'right';
+
 // Allowed types for columns in the table configuration
 export type EtConfigurationColumnType =
   | 'string'
@@ -69,6 +71,7 @@ export type EtConfiguration = {
   styleEnhancements?: {
     zebraStriping?: boolean;
     rowHoverHighlight?: boolean;
+    horizontalTextAlignment?: TextAlignment;
   };
 };
 

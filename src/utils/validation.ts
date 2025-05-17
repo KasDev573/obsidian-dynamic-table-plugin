@@ -152,7 +152,11 @@ export const VALIDATION_JSON_SCHEMA = {
       type: 'object',
       properties: {
         zebraStriping: { type: 'boolean' },
-        rowHoverHighlight: { type: 'boolean' }
+        rowHoverHighlight: { type: 'boolean' },
+        horizontalTextAlignment: {
+              type: 'string',
+              enum: ['left', 'center', 'right']
+        }
       },
       additionalProperties: false
     },

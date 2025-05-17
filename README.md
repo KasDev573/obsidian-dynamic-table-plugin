@@ -27,12 +27,16 @@ controls:
   showSearch: true
   showFilter: true
 ```
-6) I added the ability to color every other row a bit darker for better visibility to user to distinguish between rows. As well as hover effect. Both of these are yaml configurations! `styleEnhancements:` `zebraStriping: true` `  rowHoverHighlight: true`
+6) I added the ability to color every other row a bit darker for better visibility to user to distinguish between rows. As well as hover effect. Both of these are yaml configurations! I also added horizontal text alignment yaml option, the alignment has options `left` `center` `right`
+
+`styleEnhancements:` `zebraStriping: true` `  rowHoverHighlight: true` `horizontalTextAlignment: left` 
 ```
 styleEnhancements:
   zebraStriping: true
   rowHoverHighlight: true
+  horizontalTextAlignment: left
 ```
+
 ### Community Plugin
 - Open Settings > Third-party plugin
 - Make sure Safe mode is off
@@ -72,6 +76,7 @@ controls:
 styleEnhancements:
   zebraStriping: true
   rowHoverHighlight: true
+  horizontalTextAlignment: left
 
 hide-configuration: true
 ```

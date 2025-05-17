@@ -191,6 +191,7 @@ controls:
 styleEnhancements:
   zebraStriping: true
   rowHoverHighlight: true
+  horizontalTextAlignment: left
 
 hide-configuration: true
 \`\`\``;
