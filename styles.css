@@ -20,7 +20,7 @@
 .dynamic-table {
   & .table-container {
     width: 100%;
-    overflow-x: scroll; /* Enable horizontal scrolling for wide tables */
+    overflow-x: scroll;
   }
 
   /* Buttons used within cell editors */
@@ -31,7 +31,6 @@
     margin-right: 5px;
   }
 
-  /* Container for editors to center align content */
   & .editor-container {
     display: flex;
     align-items: center;
@@ -40,7 +39,6 @@
     justify-items: center;
   }
 
-  /* Margin utility classes */
   & .editor-mr-5 {
     margin-right: 5px;
   }
@@ -49,9 +47,23 @@
     margin-top: 1em;
   }
 
-  /* Cursor style when hovering over editable cells */
   & .editor-cursor-pointer {
     cursor: pointer;
+  }
+
+  /* Spacing from MarkdownRenderer (e.g. links/checkboxes wrapped in <p>) */
+  td > p {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  td > * {
+    margin: 0;
+    padding: 0;
+  }
+
+  td {
+    padding: 4px 8px; /* Tightened table cell spacing */
   }
 }
 
@@ -70,14 +82,13 @@
   }
 
   & button:disabled {
-    opacity: 0.4; /* Dim disabled buttons */
+    opacity: 0.4;
   }
 
   & button.active {
-    color: var(--text-accent); /* Highlight active page button */
+    color: var(--text-accent);
   }
 
-  /* Total items count display */
   & .total {
     font-size: var(--font-smallest);
     padding-top: 1em;
@@ -90,7 +101,7 @@
   display: flex;
 
   & > div {
-    margin-right: 1em; /* Space between control sections */
+    margin-right: 1em;
   }
 
   & label {
@@ -98,7 +109,6 @@
     font-weight: var(--font-light);
   }
 
-  /* Additional spacing for sorting selects */
   & .sorting {
     & select {
       margin-right: 0.5em;
@@ -127,20 +137,17 @@
   color: var(--text-error);
 }
 
-/* Container for error messages */
 .dynamic-table-errors {
   margin-bottom: 1.5em;
 }
 
 /* Responsive styles for smaller screens */
 @media (max-width: 700px) {
-  /* Stack controls vertically on narrow screens */
   .dynamic-table-controls {
     flex-direction: column;
     margin-bottom: 1em;
   }
 
-  /* Hide pagination details for mobile to save space */
   .dynamic-table-pagination {
     margin-top: 1em;
 

@@ -1,16 +1,8 @@
 /**
  * useDynamicTablesState Hook
  *
- * This hook manages the core state and logic for the dynamic tables plugin.
- * It processes table data and configuration, handling sorting, filtering,
- * searching, pagination, and checkbox state persistence to external JSON files.
- *
- * Responsibilities include:
- * - Parsing and indexing columns with proper formatting
- * - Building enriched rows from raw markdown data
- * - Managing checkbox state external storage and synchronization
- * - Applying sorting, filtering, and search functions on table rows
- * - Handling pagination and pagination state changes
+ * Manages table rendering, checkbox state persistence, sorting,
+ * filtering, pagination, and formatting of dynamic table content.
  */
 
 import {
@@ -23,7 +15,6 @@ import {
   RawTableData,
 } from 'src/utils/types';
 import { useCallback, useMemo, useState } from 'react';
-
 import {
   makeFormatterForColumn,
   parseNumberFormat,
@@ -42,7 +33,6 @@ import {
 } from 'src/utils/sharedConstants';
 import { extractValue } from 'src/utils/values';
 import { getSortingFunction } from 'src/utils/sorting';
-
 import { PaginationOptions } from 'src/DynamicTables/components/PaginationView';
 import { App, FileSystemAdapter, MarkdownView } from 'obsidian';
 import { TableManager } from 'src/TableManager';
@@ -56,12 +46,6 @@ type CheckboxMeta = {
   column: string;
 };
 
-/**
- * Loads checkbox states from an external JSON file saved in the vault.
- * @param app Obsidian app instance for accessing vault
- * @param fileName Name of the active file to associate checkbox states
- * @returns Object mapping checkbox IDs to their saved state metadata
- */
 function loadCheckboxStates(app: App, fileName: string): Record<string, CheckboxMeta> {
   try {
     const adapter = app.vault.adapter;
@@ -78,14 +62,18 @@ function loadCheckboxStates(app: App, fileName: string): Record<string, Checkbox
   return {};
 }
 
-/**
- * Main hook that manages the table state and logic.
- * @param app Obsidian app instance
- * @param configuration Table configuration object
- * @param indexOfTheDynamicTable Index of the current table instance on the page
- * @param tableData Raw data extracted from the markdown table
- * @returns An object containing state and state setters for rendering and interaction
- */
+function createFilterFunctionCache(expressions: string[]) {
+  const cache: Record<string, (row: Record<string, any>) => boolean> = {};
+  for (const expr of expressions) {
+    try {
+      cache[expr] = Function('$row', `return (${expr})`) as (row: Record<string, any>) => boolean;
+    } catch {
+      cache[expr] = () => false;
+    }
+  }
+  return cache;
+}
+
 export function useDynamicTablesState(
   app: App,
   configuration: EtConfiguration,
@@ -129,7 +117,7 @@ export function useDynamicTablesState(
           ? DEFAULT_TIME_FORMAT
           : columnConfiguration['date-format'] ?? DEFAULT_DATE_FORMAT;
 
-      const base: EtDataColumn = {
+      const column: EtDataColumn = {
         ...rest,
         alias: rest.alias || columnName,
         editable: 'editable' in columnConfiguration ? !!columnConfiguration.editable : !!configuration.editable,
@@ -141,11 +129,11 @@ export function useDynamicTablesState(
         yesFormat: rest['yes-format'] ?? DEFAULT_BOOL_YES_FORMAT,
         noFormat: rest['no-format'] ?? DEFAULT_BOOL_NO_FORMAT,
         el: document.createElement('td'),
-        formatter: null as any,
+        formatter: () => '',
       };
 
-      base.formatter = makeFormatterForColumn(base, formatter);
-      return base;
+      column.formatter = makeFormatterForColumn(column, formatter);
+      return column;
     });
   }, [tableData.columns, configuration.columns, configuration.editable]);
 
@@ -232,11 +220,19 @@ export function useDynamicTablesState(
         formattedValue: c.formattedValue,
       }));
 
+      const searchIndex = enrichedCells
+        .filter((c) => c.column.searchable)
+        .map((c) => c.value?.toString().toLowerCase() ?? '')
+        .join(' ');
+
       return {
         index: rowIdx,
         orderedCells: enrichedCells,
+        el: document.createElement('table'),
+        cells: Object.fromEntries(enrichedCells.map((c) => [c.column.name, c])),
+        searchIndex,
         ...allCells,
-      } as EtDataRow;
+      };
     });
 
     if (updated && filePath) {
@@ -247,39 +243,28 @@ export function useDynamicTablesState(
       }
     }
 
+    const filterFns = createFilterFunctionCache(filtering);
+    const lcSearch = searching?.toLowerCase() ?? '';
+
+    if (filtering.length > 0 || lcSearch) {
+      result = result.filter(($row) => {
+        const matchesFilter = filtering.every((expr) => {
+          const fn = filterFns[expr];
+          return fn ? fn($row) : false;
+        });
+
+        const matchesSearch = !lcSearch || $row.searchIndex.includes(lcSearch);
+
+        return matchesFilter && matchesSearch;
+      });
+    }
+
     if (sorting) {
       const sortFn = getSortingFunction(sorting, indexedColumns);
       if (sortFn) {
         const sortField = sorting.startsWith('-') ? sorting.slice(1) : sorting;
         result.sort((a, b) => sortFn(a[sortField], b[sortField]));
       }
-    }
-
-    if (filtering.length > 0 || searching) {
-      result = result.filter(($row) => {
-        const matchesFilter = filtering.every((expr) => {
-          try {
-            return Function('$row', `return (${expr})`)($row);
-          } catch {
-            return false;
-          }
-        });
-
-        let matchesSearch = true;
-        if (searching) {
-          const lcSearch = searching.toLocaleLowerCase();
-          matchesSearch = $row.orderedCells
-            .filter((c) => c.column.searchable)
-            .some((c) => {
-              if (Array.isArray(c.value)) {
-                return c.value.some((v) => v.toLocaleLowerCase().includes(lcSearch));
-              }
-              return c.value?.toString().toLocaleLowerCase().includes(lcSearch);
-            });
-        }
-
-        return matchesFilter && matchesSearch;
-      });
     }
 
     setTotalNumberOfUnpaginatedRows(result.length);
@@ -297,9 +282,9 @@ export function useDynamicTablesState(
     app,
     configuration,
     tableData,
-    sorting,
     filtering,
     searching,
+    sorting,
     pagination,
     indexedColumns,
   ]);

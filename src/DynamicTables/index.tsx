@@ -19,7 +19,7 @@ import { EtConfiguration, RawTableData } from 'src/utils/types';
 import { useDynamicTablesState } from 'src/DynamicTables/useDynamicTablesState';
 import { PaginationView } from 'src/DynamicTables/components/PaginationView';
 import { ControlsView } from 'src/DynamicTables/components/Controls';
-import { App, MarkdownView, FileSystemAdapter } from 'obsidian';
+import { App, MarkdownView, FileSystemAdapter, MarkdownRenderer } from 'obsidian';
 import { TableManager } from 'src/TableManager';
 import { makeEditor } from 'src/DynamicTables/editors';
 import * as css from 'css';
@@ -42,7 +42,6 @@ type DynamicTablesProps = {
   showFilter: boolean;
 };
 
-// Helper: Get base vault path if local filesystem adapter is used
 const getVaultBasePath = (app: App): string | null => {
   const adapter = app.vault.adapter;
   if (adapter instanceof FileSystemAdapter) {
@@ -51,13 +50,11 @@ const getVaultBasePath = (app: App): string | null => {
   return null;
 };
 
-// Helper: Construct the external JSON file path for checkbox states by filename
 const getStateFilePath = (app: App, fileName: string): string | null => {
   const base = getVaultBasePath(app);
   return base ? path.join(base, '_checkbox-states', `${fileName}.json`) : null;
 };
 
-// Load checkbox state data from external JSON file
 const loadCheckboxStates = (app: App, fileName: string): Record<string, CheckboxMeta> => {
   try {
     const filePath = getStateFilePath(app, fileName);
@@ -71,7 +68,6 @@ const loadCheckboxStates = (app: App, fileName: string): Record<string, Checkbox
   return {};
 };
 
-// Save checkbox state data to external JSON file
 const saveCheckboxStates = (app: App, fileName: string, states: Record<string, CheckboxMeta>) => {
   try {
     const base = getVaultBasePath(app);
@@ -96,10 +92,8 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
   showSearch,
   showFilter,
 }) => {
-  // Reference to tbody element to dynamically insert rows
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
-  // Hook to manage filtering, sorting, searching, pagination state
   const {
     indexedColumns,
     rows,
@@ -114,98 +108,76 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
     setSearching,
   } = useDynamicTablesState(app, configuration, indexOfTheDynamicTable, tableData);
 
-  // Effect to render rows and bind cell editors & checkbox state management
   useEffect(() => {
     if (!tbodyRef.current) return;
-
-    // Clear previous rows
     tbodyRef.current.textContent = '';
 
-    // Determine file name of active note to load/save checkbox states externally
     const fileName = app.workspace.getActiveFile()?.basename ?? 'default';
     const checkboxStates = loadCheckboxStates(app, fileName);
 
-    // Render each row
     rows.forEach((row) => {
       const tr = document.createElement('tr');
       tr.setAttribute('data-dt-row', row.index.toString());
 
-      // Current markdown content (for inline editing persistence)
       const currentContent = app.workspace.getActiveViewOfType(MarkdownView)?.data ?? '';
       const tableManager = new TableManager();
 
-      // Render visible cells in order
-      row.orderedCells
-        .filter((c) => !c.column.hidden)
-        .forEach((cell, idx2) => {
-          const td = document.createElement('td');
-          td.setAttribute('data-dt-cell', idx2.toString());
-          td.setAttribute('data-dt-row-cell', `${row.index}-${idx2}`);
+      row.orderedCells.filter((c) => !c.column.hidden).forEach((cell, idx2) => {
+        const td = document.createElement('td');
+        td.setAttribute('data-dt-cell', idx2.toString());
+        td.setAttribute('data-dt-row-cell', `${row.index}-${idx2}`);
 
-          // Set cell alignment if specified
-          if (tableData.rowDirections[idx2] !== null) {
-            td.setAttribute('align', tableData.rowDirections[idx2] as string);
-          }
+        if (tableData.rowDirections[idx2] !== null) {
+          td.setAttribute('align', tableData.rowDirections[idx2] as string);
+        }
+        if (cell.column.nowrap) {
+          td.className = 'dynamic-table-nowrap';
+        }
 
-          // Apply nowrap class if specified
-          if (cell.column.nowrap) {
-            td.className = 'dynamic-table-nowrap';
-          }
+        if (typeof cell.formattedValue === 'string') {
+          MarkdownRenderer.renderMarkdown(
+            cell.formattedValue,
+            td,
+            app.workspace.getActiveFile()?.path ?? '',
+            app as any
+          );
+        } else if (cell.formattedValue instanceof HTMLElement) {
+          td.appendChild(cell.formattedValue);
+        }
 
-          // Append formatted content or fallback to innerHTML
-          try {
-            td.appendChild(cell.formattedValue);
-          } catch (e) {
-            td.innerHTML = cell.formattedValue;
-          }
+        const checkboxes = td.querySelectorAll<HTMLInputElement>('input[type="checkbox"][id]');
+        checkboxes.forEach((checkbox) => {
+          const id = checkbox.id;
+          const saved = checkboxStates[id];
+          if (saved) checkbox.checked = saved.checked;
 
-          // Load checkbox states and bind change events for saving state externally
-          const checkboxes = td.querySelectorAll<HTMLInputElement>('input[type="checkbox"][id]');
-          checkboxes.forEach((checkbox) => {
-            const id = checkbox.id;
-            const saved = checkboxStates[id];
-            if (saved) {
-              checkbox.checked = saved.checked;
-            }
-
-            checkbox.addEventListener('change', () => {
-              checkboxStates[id] = {
-                checked: checkbox.checked,
-                rowIndex: row.index,
-                column: cell.column.alias || cell.column.name,
-              };
-              saveCheckboxStates(app, fileName, checkboxStates);
-            });
+          checkbox.addEventListener('change', () => {
+            checkboxStates[id] = {
+              checked: checkbox.checked,
+              rowIndex: row.index,
+              column: cell.column.alias || cell.column.name,
+            };
+            saveCheckboxStates(app, fileName, checkboxStates);
           });
-
-          // Inline cell editing: update markdown content on value change
-          const onValueChange = (newVal: string) => {
-            const modifiedRowValues = row.orderedCells.map((c, i) =>
-              i === idx2 ? newVal : c.rawValue,
-            );
-            const modifiedContent = tableManager.modifyLine(
-              currentContent,
-              row.index,
-              modifiedRowValues,
-              indexOfTheDynamicTable,
-            );
-
-            //@ts-ignore
-            app.workspace.getActiveFileView().setViewData(modifiedContent, true);
-            //@ts-ignore
-            app.workspace.activeEditor?.previewMode?.rerender?.();
-          };
-
-          // Initialize editable cells with editor UI
-          if (cell.column.editable) {
-            makeEditor(td, cell, configuration, onValueChange);
-            td.classList.add('editor-cursor-pointer');
-          }
-
-          tr.appendChild(td);
         });
 
-      // Append the fully constructed row to tbody
+        const onValueChange = (newVal: string) => {
+          const modifiedRowValues = row.orderedCells.map((c, i) => i === idx2 ? newVal : c.rawValue);
+          const modifiedContent = tableManager.modifyLine(currentContent, row.index, modifiedRowValues, indexOfTheDynamicTable);
+          //@ts-ignore
+          app.workspace.getActiveFileView().setViewData(modifiedContent, true);
+          //@ts-ignore
+          app.workspace.activeEditor?.previewMode?.rerender?.();
+        };
+
+        if (cell.column.editable) {
+          makeEditor(td, cell, configuration, onValueChange);
+          td.classList.add('editor-cursor-pointer');
+        }
+
+        tr.appendChild(td);
+      });
+
       tbodyRef.current!.appendChild(tr);
     });
   }, [
@@ -217,7 +189,6 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
     tableData.rowDirections,
   ]);
 
-  // Memoize CSS styles parsed from configuration.style
   const style = useMemo<string | undefined>(() => {
     if (!configuration.style) return undefined;
 
@@ -237,7 +208,6 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
     }
   }, [configuration.style]);
 
-  // Render table with optional controls and pagination
   return (
     <div className="dynamic-table">
       {style && <style>{style}</style>}
@@ -262,17 +232,14 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
         <table>
           <thead>
             <tr>
-              {indexedColumns
-                .filter((c) => !c.hidden)
-                .map((c, idx) => (
-                  <th
-                    key={idx}
-                    className={`${c.nowrap ? 'dynamic-table-nowrap' : ''} ${
-                      configuration['fix-header'] ? 'dynamic-table-fix-header' : ''
-                    }`}
-                    dangerouslySetInnerHTML={{ __html: c.name }}
-                  />
-                ))}
+              {indexedColumns.filter((c) => !c.hidden).map((c, idx) => (
+                <th
+                  key={idx}
+                  className={`${c.nowrap ? 'dynamic-table-nowrap' : ''} ${configuration['fix-header'] ? 'dynamic-table-fix-header' : ''}`}
+                >
+                  {c.name}
+                </th>
+              ))}
             </tr>
           </thead>
 
