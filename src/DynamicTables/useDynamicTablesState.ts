@@ -1,8 +1,12 @@
 /**
  * useDynamicTablesState Hook
  *
- * Manages table rendering, checkbox state persistence, sorting,
- * filtering, pagination, and formatting of dynamic table content.
+ * This hook powers the dynamic table rendering logic for the Obsidian plugin. It manages:
+ * - Table row rendering
+ * - Formatting and interpreting column values
+ * - Sorting and pagination
+ * - Search and filter logic (with debounce for performance)
+ * - External checkbox state persistence (loaded/saved from local file)
  */
 
 import {
@@ -38,14 +42,17 @@ import { App, FileSystemAdapter, MarkdownView } from 'obsidian';
 import { TableManager } from 'src/TableManager';
 import fs from 'fs';
 import path from 'path';
+import { useDebounce } from 'src/utils/useDebounce';
 
 // Type definition for saved checkbox state metadata
+// Used to persist checkbox values independently of markdown
 type CheckboxMeta = {
   checked: boolean;
   rowIndex: number;
   column: string;
 };
 
+// Load persisted checkbox states from file
 function loadCheckboxStates(app: App, fileName: string): Record<string, CheckboxMeta> {
   try {
     const adapter = app.vault.adapter;
@@ -62,6 +69,7 @@ function loadCheckboxStates(app: App, fileName: string): Record<string, Checkbox
   return {};
 }
 
+// Cache filter expressions as compiled functions for reuse
 function createFilterFunctionCache(expressions: string[]) {
   const cache: Record<string, (row: Record<string, any>) => boolean> = {};
   for (const expr of expressions) {
@@ -74,16 +82,20 @@ function createFilterFunctionCache(expressions: string[]) {
   return cache;
 }
 
+// Main hook
 export function useDynamicTablesState(
   app: App,
   configuration: EtConfiguration,
   indexOfTheDynamicTable: number,
   tableData: RawTableData,
 ) {
+  // Sorting, filtering, and debounced searching state
   const [sorting, setSorting] = useState<string | null>(configuration.sort ?? null);
   const [filtering, setFiltering] = useState<string[]>([]);
   const [searching, setSearching] = useState<string | null>(null);
+  const debouncedSearch = useDebounce(searching, 200);
 
+  // Pagination configuration state
   const [pagination, setPagination] = useState<Pagination | null>(() => {
     if (configuration.pagination) {
       const pageSize = configuration.pagination['page-size'] ?? DEFAULT_PAGE_SIZE;
@@ -100,10 +112,12 @@ export function useDynamicTablesState(
   const [totalNumberOfUnpaginatedRows, setTotalNumberOfUnpaginatedRows] =
     useState<number>(tableData.rows.length);
 
+  // Pagination change handler
   const onChangePagination = useCallback((p: PaginationOptions) => {
     setPagination((pagination) => ({ ...pagination, ...p }) as Pagination);
   }, []);
 
+  // Process and format table columns with memoization
   const indexedColumns = useMemo<EtDataColumn[]>(() => {
     return tableData.columns.map((columnName, index) => {
       const columnConfiguration = (configuration.columns?.[columnName] ?? {}) as EtConfigurationColumn;
@@ -137,6 +151,7 @@ export function useDynamicTablesState(
     });
   }, [tableData.columns, configuration.columns, configuration.editable]);
 
+  // Process and filter all rows based on config and current states
   const rows = useMemo<EtDataRow[]>(() => {
     const dateFormat = configuration['date-format'] ?? DEFAULT_DATE_FORMAT;
     const datetimeFormat = configuration['datetime-format'] ?? DEFAULT_DATE_TIME_FORMAT;
@@ -168,7 +183,7 @@ export function useDynamicTablesState(
         const raw = rawTableLines?.[rowIdx + 2]?.[cellIdx] ?? '';
         const isCheckbox = raw.includes('type="checkbox"');
         if (isCheckbox) {
-          const match = raw.match(/id="([^"]+)"/);
+          const match = raw.match(/id="([^\"]+)"/);
           const checkboxId = match?.[1];
           const isChecked = raw.includes('checked');
 
@@ -235,6 +250,7 @@ export function useDynamicTablesState(
       };
     });
 
+    // Persist new checkbox state if modified
     if (updated && filePath) {
       try {
         fs.writeFileSync(filePath, JSON.stringify(checkboxStates, null, 2));
@@ -243,8 +259,9 @@ export function useDynamicTablesState(
       }
     }
 
+    // Apply filters and search
     const filterFns = createFilterFunctionCache(filtering);
-    const lcSearch = searching?.toLowerCase() ?? '';
+    const lcSearch = debouncedSearch?.toLowerCase() ?? '';
 
     if (filtering.length > 0 || lcSearch) {
       result = result.filter(($row) => {
@@ -259,6 +276,7 @@ export function useDynamicTablesState(
       });
     }
 
+    // Apply sorting
     if (sorting) {
       const sortFn = getSortingFunction(sorting, indexedColumns);
       if (sortFn) {
@@ -269,6 +287,7 @@ export function useDynamicTablesState(
 
     setTotalNumberOfUnpaginatedRows(result.length);
 
+    // Apply pagination
     if (pagination) {
       result = result.slice(
         pagination.pageSize * (pagination.pageNumber - 1),
@@ -283,12 +302,13 @@ export function useDynamicTablesState(
     configuration,
     tableData,
     filtering,
-    searching,
+    debouncedSearch,
     sorting,
     pagination,
     indexedColumns,
   ]);
 
+  // Hook return values
   return {
     indexedColumns,
     rows,
