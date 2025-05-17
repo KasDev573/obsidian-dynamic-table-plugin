@@ -18,7 +18,7 @@ filters:
     Example3: "$row.columnTitle?.includes('false')"
 ```
 
-4) You may have noticed above with Headername: and OtherHeaderName:, I made it so you could have filter headers that appear above your grouped filters. This was for people who have lots of filters and wanted an easier time visually.
+4) You may have noticed above with Headername: and OtherHeaderName:, I made it so you could have filter headers that appear above your grouped filters. This was for people who have lots of filters and wanted an easier time visually if you had a long dropdown due to numerous filters.
 5) I made it so you could control the UI view, whether or not you want the Sort, Search, or Filter sections to appear with a YAML config! Check below: (true = visible, false = not visible)
 
 ```
@@ -27,7 +27,7 @@ controls:
   showSearch: true
   showFilter: true
 ```
-6) I added the ability to color every other row a bit darker for better visibility to user to distinguish between rows. As well as hover effect. `styleEnhancements:` `zebraStriping: true` `  rowHoverHighlight: true` `horizontalTextAlignment: left`
+6) I added the ability to color every other row a bit darker for better visibility to the user to distinguish between rows. As well as hover effect. `styleEnhancements:` `zebraStriping: true` `  rowHoverHighlight: true` `horizontalTextAlignment: left`
 7) I added horizontal text alignment yaml option, the alignment has options `left` `center` `right`
 8) I added vertical text alignment yaml option, the alignment has options `top` `center` `bottom`
 
