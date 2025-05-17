@@ -6,15 +6,16 @@ This plugin is an updated and extended version based on the original **Enhanced 
 
 # Whats new?
 1) Any functionality stacks. Meaning that you can sort by column title, the ascending/descending entries while having multiple filters active and being able to search to narrow things down even further all at the same time!
-2) Checkboxes in Obsidian can be problematic especially with YAML, the best I found for some time was in [obsidian-table-checkboxes](https://github.com/0x-DLN/obsidian-table-checkboxes) with example `<input type="checkbox" unchecked id="cfa0fe">`, if you clicked their checkbox `<input type="checkbox" checked id="cfa0fe">` it would save the state in the markdown. However, with YAML and the enhanced table plugin, this would break the functionality, causing you to need to reload each time, which was not ideal. Now there is this: `<input type="checkbox" id="cfa0fe">` for this format instead I made a script that will export to a folder called '_checkbox-states' inside of your vault folder. This will save the states of those checkboxes externally to a JSON file without breaking the UI! This was necessary because the id format without checked or unchecked doesn't break the controls but also doesn't save if they have been checked for future sessions, hence my script. Also, I did make it so if you update your file name or delete your file it will adjust the appropriate JSON file as well. (If you edit the file name refresh the document before checking boxes just to be safe)
-3) I made it so you could filter a column by whether or not a checkbox was checked or unchecked, it must be '.includes' true or false for checked or unchecked boxes. Example below: (note the formatting for the filter, the only things to be changed are columnTitle to your column name, leave the ?, and also the headername to desired header and example to desired filter name)
+2) Checkboxes in Obsidian can be problematic especially with YAML, the best I found for some time was in [obsidian-table-checkboxes](https://github.com/0x-DLN/obsidian-table-checkboxes) with example `<input type="checkbox" unchecked id="cfa0fe">`, if you clicked their checkbox `<input type="checkbox" checked id="cfa0fe">` it would save the state in the markdown. However, with YAML and the enhanced table plugin, this would break the functionality, causing you to need to reload each time, which was not ideal. Now there is this: `<input type="checkbox" id="cfa0fe">` for this format instead I made a script that will export to a folder called `_checkbox-states` inside of your vault folder. This will save the states of those checkboxes externally to a JSON file without breaking the UI! This was necessary because the id format without checked or unchecked doesn't break the controls but also doesn't save if they have been checked for future sessions, hence my script. Also, I did make it so if you update your file name or delete your file it will adjust the appropriate JSON file as well. (If you edit the file name refresh the document before checking boxes just to be safe)
+3) I made it so you could filter a column by whether or not a checkbox was checked or unchecked, it must be `.includes` true or false for checked or unchecked boxes. Example below: (note the formatting for the filter, the only things to be changed are columnTitle to your column name, leave the ?, and also the headername to desired header and example to desired filter name)
 
 ``` 
 filters:
   Headername:
     Example: "$row.columnTitle?.includes('true')"
+    Exampl2: "$row.columnTitle?.includes('true')"
   OtherHeaderName:
-    Example2: "$row.columnTitle?.includes('false')"
+    Example3: "$row.columnTitle?.includes('false')"
 ```
 
 4) You may have noticed above with Headername: and OtherHeaderName:, I made it so you could have filter headers that appear above your grouped filters. This was for people who have lots of filters and wanted an easier time visually.
@@ -25,6 +26,12 @@ controls:
   showSort: true
   showSearch: true
   showFilter: true
+```
+6) I added the ability to color every other row a bit darker for better visibility to user to distinguish between rows. As well as hover effect. Both of these are yaml configurations! `styleEnhancements:` `zebraStriping: true` `  rowHoverHighlight: true`
+```
+styleEnhancements:
+  zebraStriping: true
+  rowHoverHighlight: true
 ```
 ### Community Plugin
 - Open Settings > Third-party plugin
@@ -61,6 +68,10 @@ controls:
   showSort: true
   showSearch: true
   showFilter: true
+  
+styleEnhancements:
+  zebraStriping: true
+  rowHoverHighlight: true
 
 hide-configuration: true
 ```
