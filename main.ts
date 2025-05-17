@@ -40,35 +40,41 @@ export default class DynamicTablePlugin extends Plugin {
     this.addSettingTab(new DynamicTablesSettingTab(this.app, this));
 
     this.registerMarkdownPostProcessor(async (el, ctx) => {
-      const possibleMountContext = await getMountContext(el, ctx);
+      try {
+        const possibleMountContext = await getMountContext(el, ctx);
 
-      if (!possibleMountContext) return;
+        if (!possibleMountContext) {
+          return; // Allow Obsidian to render normally
+        }
 
-      if (isError(possibleMountContext)) {
-        const errorsContainer = el.createDiv({ cls: 'dynamic-tables-errors' });
-        errorsContainer.createDiv({ text: `⚠️ Validation errors:`, cls: 'dynamic-tables-error' });
-        errorsContainer.createDiv({ text: `- ${possibleMountContext}`, cls: 'dynamic-tables-error' });
-        return;
-      }
+        if (isError(possibleMountContext)) {
+          const errorsContainer = el.createDiv({ cls: 'dynamic-tables-errors' });
+          errorsContainer.createDiv({ text: `⚠️ Validation errors:`, cls: 'dynamic-tables-error' });
+          errorsContainer.createDiv({ text: `- ${possibleMountContext}`, cls: 'dynamic-tables-error' });
+          return;
+        }
 
-      const [
-        yamlCodeEl,
-        configuration,
-        tableEl,
-        tableData,
-        indexOfTheDynamicTable,
-      ] = possibleMountContext as MountContext;
-
-      setTimeout(() => {
-        mountDynamicTables(
-          this.app,
+        const [
           yamlCodeEl,
           configuration,
           tableEl,
           tableData,
           indexOfTheDynamicTable,
-        );
-      }, 300);
+        ] = possibleMountContext as MountContext;
+
+        setTimeout(() => {
+          mountDynamicTables(
+            this.app,
+            yamlCodeEl,
+            configuration,
+            tableEl,
+            tableData,
+            indexOfTheDynamicTable,
+          );
+        }, 300);
+      } catch (error) {
+        console.error('[DynamicTables] Error in postprocessor:', error);
+      }
     }, 1);
 
     this.registerEvent(this.app.vault.on('rename', this.onFileRename.bind(this)));
