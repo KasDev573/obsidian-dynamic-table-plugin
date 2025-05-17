@@ -6,30 +6,29 @@
  *   and render dynamic tables with YAML configurations.
  * - Handle file system events (rename/delete) to maintain synchronization
  *   of external JSON files storing checkbox states linked to markdown files.
- * - Provide a settings tab UI to verify plugin activation.
+ * - Provide a settings tab UI with example YAML configuration and plugin info.
  */
 
-import { Plugin, PluginSettingTab, App, Setting, Notice, TFile, FileSystemAdapter } from 'obsidian';
+import {
+  Plugin,
+  PluginSettingTab,
+  App,
+  Setting,
+  TFile,
+  FileSystemAdapter,
+  ButtonComponent,
+} from 'obsidian';
 
-// Utility to retrieve and validate the table-related context from a markdown block
 import {
   getMountContext,
   MountContext,
   mountDynamicTables,
 } from 'src/utils/mount';
 
-// Handles table-related logic (formatting, data tracking, etc.)
 import { TableManager } from 'src/TableManager';
-
-// Import Node.js 'fs' and 'path' for file system operations
 import * as fs from 'fs';
 import * as path from 'path';
 
-/**
- * Type guard to check if the mount context is an error string.
- * @param possibleMountContext Any value to check
- * @returns True if the value is a string representing an error, else false
- */
 function isError(possibleMountContext: any): possibleMountContext is string {
   return typeof possibleMountContext === 'string';
 }
@@ -37,10 +36,6 @@ function isError(possibleMountContext: any): possibleMountContext is string {
 export default class DynamicTablePlugin extends Plugin {
   public tableManager = new TableManager();
 
-  /**
-   * Called when the plugin is loaded. Sets up the settings tab,
-   * registers markdown post-processing, and file system event listeners.
-   */
   async onload() {
     this.addSettingTab(new DynamicTablesSettingTab(this.app, this));
 
@@ -51,14 +46,8 @@ export default class DynamicTablePlugin extends Plugin {
 
       if (isError(possibleMountContext)) {
         const errorsContainer = el.createDiv({ cls: 'dynamic-tables-errors' });
-        errorsContainer.createDiv({
-          text: `⚠️ Validation errors:`,
-          cls: 'dynamic-tables-error',
-        });
-        errorsContainer.createDiv({
-          text: `- ${possibleMountContext}`,
-          cls: 'dynamic-tables-error',
-        });
+        errorsContainer.createDiv({ text: `⚠️ Validation errors:`, cls: 'dynamic-tables-error' });
+        errorsContainer.createDiv({ text: `- ${possibleMountContext}`, cls: 'dynamic-tables-error' });
         return;
       }
 
@@ -82,30 +71,18 @@ export default class DynamicTablePlugin extends Plugin {
       }, 300);
     }, 1);
 
-    // Listen for vault file rename and delete events to sync external checkbox state files
     this.registerEvent(this.app.vault.on('rename', this.onFileRename.bind(this)));
     this.registerEvent(this.app.vault.on('delete', this.onFileDelete.bind(this)));
   }
 
-  /**
-   * Called when the plugin is unloaded.
-   */
   onunload() {
     console.log("Dynamic Tables plugin unloaded.");
   }
 
-  /**
-   * Event handler for vault file rename events.
-   * Renames the corresponding external JSON checkbox state file if it exists.
-   * @param file The renamed file
-   * @param oldPath The old path of the file before rename
-   */
   async onFileRename(file: TFile, oldPath: string) {
     try {
       const basePath = this.getVaultBasePath();
-      if (!basePath) return;
-
-      if (file.extension !== 'md') return;
+      if (!basePath || file.extension !== 'md') return;
 
       const statesDir = path.join(basePath, '_checkbox-states');
       if (!fs.existsSync(statesDir)) return;
@@ -125,17 +102,10 @@ export default class DynamicTablePlugin extends Plugin {
     }
   }
 
-  /**
-   * Event handler for vault file delete events.
-   * Deletes the corresponding external JSON checkbox state file if it exists.
-   * @param file The deleted file
-   */
   async onFileDelete(file: TFile) {
     try {
       const basePath = this.getVaultBasePath();
-      if (!basePath) return;
-
-      if (file.extension !== 'md') return;
+      if (!basePath || file.extension !== 'md') return;
 
       const statesDir = path.join(basePath, '_checkbox-states');
       if (!fs.existsSync(statesDir)) return;
@@ -151,24 +121,12 @@ export default class DynamicTablePlugin extends Plugin {
     }
   }
 
-  /**
-   * Gets the base path of the vault if using a FileSystemAdapter (local vault).
-   * Returns null if the vault is not local.
-   * @returns The base path string or null
-   */
   getVaultBasePath(): string | null {
     const adapter = this.app.vault.adapter;
-    if (adapter instanceof FileSystemAdapter) {
-      return adapter.getBasePath();
-    }
-    return null;
+    return adapter instanceof FileSystemAdapter ? adapter.getBasePath() : null;
   }
 }
 
-/**
- * Settings tab UI class for the Dynamic Tables plugin.
- * Provides a simple interface to verify plugin activation.
- */
 class DynamicTablesSettingTab extends PluginSettingTab {
   plugin: DynamicTablePlugin;
 
@@ -177,27 +135,102 @@ class DynamicTablesSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
-  /**
-   * Renders the settings tab contents.
-   */
   display(): void {
     const { containerEl } = this;
-
     containerEl.empty();
 
     containerEl.createEl("h2", { text: "Dynamic Tables Plugin Settings" });
 
+    // GitHub repo button
     new Setting(containerEl)
-      .setName("Test Plugin")
-      .setDesc("Click to verify that the Dynamic Tables plugin is active.")
-      .addButton((btn) =>
-        btn
-          .setButtonText("Run Test")
+      .setName("View Plugin Source Code")
+      .setDesc("Visit the GitHub repository for documentation, issues, and updates.")
+      .addButton((btn: ButtonComponent) =>
+        btn.setButtonText("Open GitHub Repo")
           .setCta()
-          .onClick(() => {
-            new Notice("✅ Dynamic Tables plugin is working!");
-            console.log("[DynamicTables] Test run successful.");
-          })
+          .onClick(() => window.open("https://github.com/KasDev573/obsidian-dynamic-table-plugin", "_blank"))
       );
+
+    // YAML block with copy button
+    containerEl.createEl("h3", { text: "Example YAML Configuration" });
+    const yamlContainer = containerEl.createDiv();
+    const yamlText = `yaml dynamic-table
+columns:
+  Column A:
+    alias: Column A
+    type: string
+    searchable: true
+  Column B:
+    alias: Column B
+    type: string
+    searchable: true
+  Column C:
+    alias: Column C
+    type: string
+    searchable: true
+
+filters:
+  Example Header 1:
+    Column A: "$row['Column A']?.includes('true')"
+    Column B: "$row['Column B']?.includes('false')"
+
+controls:
+  showSort: true
+  showSearch: true
+  showFilter: true
+
+hide-configuration: true`;
+
+    const copyYamlBtn = yamlContainer.createEl("button", { text: "Copy YAML" });
+    copyYamlBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(yamlText);
+        copyYamlBtn.textContent = "Copied!";
+        setTimeout(() => (copyYamlBtn.textContent = "Copy YAML"), 1500);
+      } catch (err) {
+        console.error("[DynamicTables] Clipboard copy failed:", err);
+        copyYamlBtn.textContent = "Failed to copy";
+      }
+    };
+
+    const yamlBlock = yamlContainer.createEl("pre");
+    yamlBlock.textContent = yamlText;
+    yamlBlock.style.whiteSpace = "pre-wrap";
+    yamlBlock.style.border = "1px solid var(--background-modifier-border)";
+    yamlBlock.style.padding = "0.75em";
+    yamlBlock.style.borderRadius = "8px";
+    yamlBlock.style.backgroundColor = "var(--background-secondary-alt)";
+    yamlBlock.style.fontSize = "0.85em";
+
+    // Markdown Table code block with copy button
+    containerEl.createEl("h3", { text: "Example Markdown Table" });
+    const markdownTableContainer = containerEl.createDiv();
+    const markdownTableText = `| Column A                            | Column B                            | Column C |
+| ----------------------------------- | ----------------------------------- | -------- |
+| <input type="checkbox" id="68aad5"> | <input type="checkbox" id="2b6727"> | Text1    |
+| <input type="checkbox" id="f797ca"> | <input type="checkbox" id="143b85"> | Text2    |
+| <input type="checkbox" id="c545ad"> | <input type="checkbox" id="e04729"> | Text3    |
+| <input type="checkbox" id="a8b8d4"> | <input type="checkbox" id="c9ec42"> | Text4    |`;
+
+    const copyMarkdownBtn = markdownTableContainer.createEl("button", { text: "Copy Table" });
+    copyMarkdownBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(markdownTableText);
+        copyMarkdownBtn.textContent = "Copied!";
+        setTimeout(() => (copyMarkdownBtn.textContent = "Copy Table"), 1500);
+      } catch (err) {
+        console.error("[DynamicTables] Clipboard copy failed:", err);
+        copyMarkdownBtn.textContent = "Failed to copy";
+      }
+    };
+
+    const markdownTableBlock = markdownTableContainer.createEl("pre");
+    markdownTableBlock.textContent = markdownTableText;
+    markdownTableBlock.style.whiteSpace = "pre-wrap";
+    markdownTableBlock.style.border = "1px solid var(--background-modifier-border)";
+    markdownTableBlock.style.padding = "0.75em";
+    markdownTableBlock.style.borderRadius = "8px";
+    markdownTableBlock.style.backgroundColor = "var(--background-secondary-alt)";
+    markdownTableBlock.style.fontSize = "0.85em";
   }
 }
