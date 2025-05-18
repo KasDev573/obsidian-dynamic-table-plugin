@@ -108,6 +108,8 @@ export function useDynamicTablesState(
   const [totalNumberOfUnpaginatedRows, setTotalNumberOfUnpaginatedRows] =
     useState<number>(tableData.rows.length);
 
+  const [augmentedRows, setAugmentedRows] = useState<EtDataRow[] | null>(null);
+
   const onChangePagination = useCallback((p: PaginationOptions) => {
     setPagination((pagination) => ({ ...pagination, ...p }) as Pagination);
   }, []);
@@ -311,5 +313,7 @@ export function useDynamicTablesState(
     setSorting,
     searching,
     setSearching,
+    setAugmentedRows,
+    augmentedRows,
   };
 }

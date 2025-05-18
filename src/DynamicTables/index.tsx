@@ -15,16 +15,18 @@
  */
 
 import React, { useEffect, useMemo, useRef } from 'react';
-import { EtConfiguration, RawTableData } from 'src/utils/types';
+import { EtConfiguration, RawTableData, EtDataCell, EtDataRow } from 'src/utils/types';
 import { useDynamicTablesState } from 'src/DynamicTables/useDynamicTablesState';
 import { PaginationView } from 'src/DynamicTables/components/PaginationView';
 import { ControlsView } from 'src/DynamicTables/components/Controls';
-import { App, MarkdownView, FileSystemAdapter, MarkdownRenderer } from 'obsidian';
+import { App, MarkdownView, FileSystemAdapter, MarkdownRenderer, Notice } from 'obsidian';
 import { TableManager } from 'src/TableManager';
 import { makeEditor } from 'src/DynamicTables/editors';
 import * as css from 'css';
 import fs from 'fs';
 import path from 'path';
+import { getSortingFunction } from 'src/utils/sorting';
+
 
 type CheckboxMeta = {
   checked: boolean;
@@ -106,6 +108,8 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
     setSorting,
     searching,
     setSearching,
+    setAugmentedRows,
+    augmentedRows,
   } = useDynamicTablesState(app, configuration, indexOfTheDynamicTable, tableData);
 
   const zebraStriping = configuration.styleEnhancements?.zebraStriping;
@@ -114,6 +118,122 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
   const rawVAlign = configuration.styleEnhancements?.verticalTextAlignment ?? 'top';
   const verticalTextAlignment = rawVAlign === 'center' ? 'middle' : rawVAlign;
   const stickyHeader = configuration.controls?.stickyHeader ?? false;
+
+useEffect(() => {
+  const file = app.workspace.getActiveFile();
+  if (!file) return;
+
+  const fetchLatestUpdates = async () => {
+    const isSortingByLastUpdated =
+      configuration.sort === 'Last Updated' || configuration.sort === '-Last Updated';
+
+    const hasLastUpdatedColumn = indexedColumns.some(
+      (col) => (col.alias ?? col.name) === 'Last Updated'
+    );
+
+    const hasAnyMangaLinks = rows.some((row) => {
+      const linkRaw = row.cells?.['Link']?.rawValue;
+      return typeof linkRaw === 'string' && /mangadex\.org\/title\/[a-z0-9-]{36}/i.test(linkRaw);
+    });
+
+    // Skip if any requirement is not met
+    if (!isSortingByLastUpdated || !hasLastUpdatedColumn || !hasAnyMangaLinks) {
+      console.info('Skipping MangaDex fetch: sort not Last Updated, column missing, or no valid links.');
+      return;
+    }
+
+    new Notice('Fetching manga update info...');
+
+    const updated = await Promise.all(rows.map(async (row) => {
+      const linkRaw = typeof row.cells?.['Link']?.rawValue === 'string' ? row.cells['Link'].rawValue : '';
+      const match = linkRaw.match(/mangadex\.org\/title\/([a-z0-9-]{36})/i);
+      const mangaId = match?.[1];
+
+      if (!mangaId) return row;
+
+      try {
+        const proxyUrl = `http://localhost:3000/proxy/${mangaId}`;
+        const res = await fetch(proxyUrl);
+        const json = await res.json();
+
+        const updatedAt = json.data?.[0]?.attributes?.updatedAt ?? null;
+        const formattedDate = updatedAt ? new Date(updatedAt).toLocaleString() : '';
+        const parsedDate = updatedAt ? new Date(updatedAt) : null;
+
+        const updatedOrderedCells = row.orderedCells.map((c: EtDataCell) => {
+          if ((c.column.alias ?? c.column.name) === 'Last Updated') {
+            return {
+              ...c,
+              rawValue: updatedAt ?? '',
+              value: parsedDate,
+              formattedValue: formattedDate,
+            };
+          }
+          return c;
+        });
+
+        const lastUpdatedCell = updatedOrderedCells.find(
+          (c) => (c.column.alias ?? c.column.name) === 'Last Updated'
+        );
+
+        return {
+          ...row,
+          'Last Updated': formattedDate,
+          orderedCells: updatedOrderedCells,
+          cells: {
+            ...row.cells,
+            ...(lastUpdatedCell ? { 'Last Updated': lastUpdatedCell } : {}),
+          },
+        };
+      } catch (err) {
+        console.error(`Error fetching latest chapter for ${mangaId}:`, err);
+        return row;
+      }
+    }));
+
+    // Sorting
+    if (isSortingByLastUpdated) {
+      const desc = configuration.sort?.startsWith('-');
+      updated.sort((a, b) => {
+        const dateA = a.cells?.['Last Updated']?.value as Date;
+        const dateB = b.cells?.['Last Updated']?.value as Date;
+        if (!dateA || !dateB) return 0;
+        return desc ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
+      });
+    } else if (configuration.sort) {
+      const sortValue = configuration.sort as string;
+      const sortField = sortValue.startsWith('-') ? sortValue.slice(1) : sortValue;
+
+      const sortFn = getSortingFunction(configuration.sort, indexedColumns);
+      if (sortFn) {
+        updated.sort((a, b) =>
+          sortFn(
+            (a.cells as Record<string, EtDataCell | undefined>)?.[sortField]?.value,
+            (b.cells as Record<string, EtDataCell | undefined>)?.[sortField]?.value
+          )
+        );
+      }
+    }
+
+    setAugmentedRows(updated);
+  };
+
+  fetchLatestUpdates();
+
+  const onFileChange = () => {
+    const newFile = app.workspace.getActiveFile();
+    if (newFile?.path === file.path) {
+      fetchLatestUpdates();
+    }
+  };
+
+  app.workspace.on('file-open', onFileChange);
+  return () => {
+    app.workspace.off('file-open', onFileChange);
+  };
+}, [app, rows, setAugmentedRows, configuration.sort, indexedColumns]);
+
+
 
 
 
@@ -124,7 +244,7 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
     const fileName = app.workspace.getActiveFile()?.basename ?? 'default';
     const checkboxStates = loadCheckboxStates(app, fileName);
 
-    rows.forEach((row) => {
+    (augmentedRows ?? rows).forEach((row: EtDataRow) => {
       const tr = document.createElement('tr');
       tr.setAttribute('data-dt-row', row.index.toString());
 
@@ -138,7 +258,9 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
       const currentContent = app.workspace.getActiveViewOfType(MarkdownView)?.data ?? '';
       const tableManager = new TableManager();
 
-      row.orderedCells.filter((c) => !c.column.hidden).forEach((cell, idx2) => {
+      row.orderedCells
+        .filter((c: EtDataCell): boolean => !c.column.hidden)
+        .forEach((cell: EtDataCell, idx2: number) => {
         const td = document.createElement('td');
         td.style.textAlign = horizontalTextAlignment;
         td.style.verticalAlign = verticalTextAlignment;
@@ -152,7 +274,12 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
           td.className = 'dynamic-table-nowrap';
         }
 
-        if (typeof cell.formattedValue === 'string') {
+        // Override "Last Updated" column rendering with injected value
+        if ((cell.column.alias ?? cell.column.name) === 'Last Updated' && augmentedRows) {
+          // Use the augmented value instead of original
+          const luCell = row.cells?.['Last Updated'];
+          td.textContent = luCell?.formattedValue || 'Fetching...';
+        } else if (typeof cell.formattedValue === 'string') {
           MarkdownRenderer.renderMarkdown(
             cell.formattedValue,
             td,
@@ -180,7 +307,10 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
         });
 
         const onValueChange = (newVal: string) => {
-          const modifiedRowValues = row.orderedCells.map((c, i) => i === idx2 ? newVal : c.rawValue);
+          const modifiedRowValues = row.orderedCells.map((c: EtDataCell, i: number) =>
+            i === idx2 ? newVal : c.rawValue
+          );
+
           const modifiedContent = tableManager.modifyLine(currentContent, row.index, modifiedRowValues, indexOfTheDynamicTable);
           //@ts-ignore
           app.workspace.getActiveFileView().setViewData(modifiedContent, true);
@@ -204,6 +334,7 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
     app.workspace,
     configuration,
     rows,
+    augmentedRows,
     tableData.rowDirections,
     zebraStriping,
     rowHoverHighlight,
