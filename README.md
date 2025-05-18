@@ -2,7 +2,7 @@
 
 A powerful and customizable dynamic table plugin for Obsidian that expands the [obsidian-enhanced-tables plugin](https://github.com/pistacchio/obsidian-enhanced-tables)
 
-This plugin is an updated and extended version based on the original **Enhanced Tables** plugin by [pistacchio](https://github.com/pistacchio). Without their effort I would not have been able to get started on their work, I cannot thank them enough for their original work.
+This plugin is an updated and extended version based on the original **Enhanced Tables** plugin by [pistacchio](https://github.com/pistacchio). Without their effort I would not have been able to get started on this work, I cannot thank them enough for their original work.
 
 # Whats new?
 1) Any functionality stacks. Meaning that you can sort by column title, the ascending/descending entries while having multiple filters active and being able to search to narrow things down even further all at the same time! Also, tweaked the search to have a 200ms delay after typing for it to search (instead of after every keystroke), this should still be smooth in general but this was to help optimize searching with large data sets.
