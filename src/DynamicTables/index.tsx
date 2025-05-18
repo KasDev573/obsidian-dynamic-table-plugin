@@ -14,7 +14,6 @@
  * - showSort, showSearch, showFilter: Flags to conditionally show UI controls.
  */
 
-import React, { useEffect, useMemo, useRef } from 'react';
 import { EtConfiguration, RawTableData, EtDataCell, EtDataRow } from 'src/utils/types';
 import { useDynamicTablesState } from 'src/DynamicTables/useDynamicTablesState';
 import { PaginationView } from 'src/DynamicTables/components/PaginationView';
@@ -26,7 +25,10 @@ import * as css from 'css';
 import fs from 'fs';
 import path from 'path';
 import { getSortingFunction } from 'src/utils/sorting';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Component } from 'obsidian';
 
+class WrapperComponent extends Component {}
 
 type CheckboxMeta = {
   checked: boolean;
@@ -94,6 +96,8 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
   showSearch,
   showFilter,
 }) => {
+  const wrapperComponentInstance = useRef(new WrapperComponent());
+
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
   const {
@@ -261,70 +265,70 @@ useEffect(() => {
       row.orderedCells
         .filter((c: EtDataCell): boolean => !c.column.hidden)
         .forEach((cell: EtDataCell, idx2: number) => {
-        const td = document.createElement('td');
-        td.style.textAlign = horizontalTextAlignment;
-        td.style.verticalAlign = verticalTextAlignment;
-        td.setAttribute('data-dt-cell', idx2.toString());
-        td.setAttribute('data-dt-row-cell', `${row.index}-${idx2}`);
+          const td = document.createElement('td');
+          td.style.textAlign = horizontalTextAlignment;
+          td.style.verticalAlign = verticalTextAlignment;
+          td.setAttribute('data-dt-cell', idx2.toString());
+          td.setAttribute('data-dt-row-cell', `${row.index}-${idx2}`);
 
-        if (tableData.rowDirections[idx2] !== null) {
-          td.setAttribute('align', tableData.rowDirections[idx2] as string);
-        }
-        if (cell.column.nowrap) {
-          td.className = 'dynamic-table-nowrap';
-        }
+          if (tableData.rowDirections[idx2] !== null) {
+            td.setAttribute('align', tableData.rowDirections[idx2] as string);
+          }
+          if (cell.column.nowrap) {
+            td.className = 'dynamic-table-nowrap';
+          }
 
-        // Override "Last Updated" column rendering with injected value
-        if ((cell.column.alias ?? cell.column.name) === 'Last Updated' && augmentedRows) {
-          // Use the augmented value instead of original
-          const luCell = row.cells?.['Last Updated'];
-          td.textContent = luCell?.formattedValue || 'Fetching...';
-        } else if (typeof cell.formattedValue === 'string') {
-          MarkdownRenderer.renderMarkdown(
-            cell.formattedValue,
-            td,
-            app.workspace.getActiveFile()?.path ?? '',
-            app as any
-          );
-        } else if (cell.formattedValue instanceof HTMLElement) {
-          td.appendChild(cell.formattedValue);
-        }
+          // Override "Last Updated" column rendering with injected value
+          if ((cell.column.alias ?? cell.column.name) === 'Last Updated' && augmentedRows) {
+            // Use the augmented value instead of original
+            const luCell = row.cells?.['Last Updated'];
+            td.textContent = luCell?.formattedValue || 'Fetching...';
+          } else if (typeof cell.formattedValue === 'string') {
+            MarkdownRenderer.renderMarkdown(
+              cell.formattedValue,
+              td,
+              app.workspace.getActiveFile()?.path ?? '',
+              wrapperComponentInstance.current
+            );
+          } else if (cell.formattedValue instanceof HTMLElement) {
+            td.appendChild(cell.formattedValue);
+          }
 
-        const checkboxes = td.querySelectorAll<HTMLInputElement>('input[type="checkbox"][id]');
-        checkboxes.forEach((checkbox) => {
-          const id = checkbox.id;
-          const saved = checkboxStates[id];
-          if (saved) checkbox.checked = saved.checked;
+          const checkboxes = td.querySelectorAll<HTMLInputElement>('input[type="checkbox"][id]');
+          checkboxes.forEach((checkbox) => {
+            const id = checkbox.id;
+            const saved = checkboxStates[id];
+            if (saved) checkbox.checked = saved.checked;
 
-          checkbox.addEventListener('change', () => {
-            checkboxStates[id] = {
-              checked: checkbox.checked,
-              rowIndex: row.index,
-              column: cell.column.alias || cell.column.name,
-            };
-            saveCheckboxStates(app, fileName, checkboxStates);
+            checkbox.addEventListener('change', () => {
+              checkboxStates[id] = {
+                checked: checkbox.checked,
+                rowIndex: row.index,
+                column: cell.column.alias || cell.column.name,
+              };
+              saveCheckboxStates(app, fileName, checkboxStates);
+            });
           });
+
+          const onValueChange = (newVal: string) => {
+            const modifiedRowValues = row.orderedCells.map((c: EtDataCell, i: number) =>
+              i === idx2 ? newVal : c.rawValue
+            );
+
+            const modifiedContent = tableManager.modifyLine(currentContent, row.index, modifiedRowValues, indexOfTheDynamicTable);
+            //@ts-ignore
+            app.workspace.getActiveFileView().setViewData(modifiedContent, true);
+            //@ts-ignore
+            app.workspace.activeEditor?.previewMode?.rerender?.();
+          };
+
+          if (cell.column.editable) {
+            makeEditor(td, cell, configuration, onValueChange);
+            td.classList.add('editor-cursor-pointer');
+          }
+
+          tr.appendChild(td);
         });
-
-        const onValueChange = (newVal: string) => {
-          const modifiedRowValues = row.orderedCells.map((c: EtDataCell, i: number) =>
-            i === idx2 ? newVal : c.rawValue
-          );
-
-          const modifiedContent = tableManager.modifyLine(currentContent, row.index, modifiedRowValues, indexOfTheDynamicTable);
-          //@ts-ignore
-          app.workspace.getActiveFileView().setViewData(modifiedContent, true);
-          //@ts-ignore
-          app.workspace.activeEditor?.previewMode?.rerender?.();
-        };
-
-        if (cell.column.editable) {
-          makeEditor(td, cell, configuration, onValueChange);
-          td.classList.add('editor-cursor-pointer');
-        }
-
-        tr.appendChild(td);
-      });
 
       tbodyRef.current!.appendChild(tr);
     });
