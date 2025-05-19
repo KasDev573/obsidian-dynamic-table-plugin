@@ -140,7 +140,6 @@ useEffect(() => {
       return typeof linkRaw === 'string' && /mangadex\.org\/title\/[a-z0-9-]{36}/i.test(linkRaw);
     });
 
-    // Skip if any requirement is not met
     if (!isSortingByLastUpdated || !hasLastUpdatedColumn || !hasAnyMangaLinks) {
       console.info('Skipping MangaDex fetch: sort not Last Updated, column missing, or no valid links.');
       return;
@@ -148,54 +147,110 @@ useEffect(() => {
 
     new Notice('Fetching manga update info...');
 
-    const updated = await Promise.all(rows.map(async (row) => {
-      const linkRaw = typeof row.cells?.['Link']?.rawValue === 'string' ? row.cells['Link'].rawValue : '';
-      const match = linkRaw.match(/mangadex\.org\/title\/([a-z0-9-]{36})/i);
-      const mangaId = match?.[1];
+    // Moved function declaration here, as per linting requirement
+    function parseChapterNumber(chapterStr: string) {
+      const num = parseFloat(chapterStr);
+      return isNaN(num) ? 0 : num;
+    }
 
-      if (!mangaId) return row;
+    const updatedWithNulls = await Promise.all(
+      rows.map(async (row) => {
+        const linkRaw = typeof row.cells?.['Link']?.rawValue === 'string' ? row.cells['Link'].rawValue : '';
+        const match = linkRaw.match(/mangadex\.org\/title\/([a-z0-9-]{36})/i);
+        const mangaId = match?.[1];
 
-      try {
-        const proxyUrl = `http://localhost:3000/proxy/${mangaId}`;
-        const res = await fetch(proxyUrl);
-        const json = await res.json();
+        if (!mangaId) {
+          console.log(`Row ${row.index}: No valid manga ID found in link.`);
+          return row;
+        }
 
-        const updatedAt = json.data?.[0]?.attributes?.updatedAt ?? null;
-        const formattedDate = updatedAt ? new Date(updatedAt).toLocaleString() : '';
-        const parsedDate = updatedAt ? new Date(updatedAt) : null;
+        try {
+          const proxyUrl = `http://localhost:3000/proxy/${mangaId}?limit=20`;
+          const res = await fetch(proxyUrl);
+          const json = await res.json();
 
-        const updatedOrderedCells = row.orderedCells.map((c: EtDataCell) => {
-          if ((c.column.alias ?? c.column.name) === 'Last Updated') {
-            return {
-              ...c,
-              rawValue: updatedAt ?? '',
-              value: parsedDate,
-              formattedValue: formattedDate,
-            };
+          const chapters = json.data ?? [];
+          console.log(`Row ${row.index}: Fetched ${chapters.length} chapters for manga ID ${mangaId}`);
+
+          let filteredChapters = chapters.filter(
+            (chap: any) => chap.attributes.translatedLanguage === 'en'
+          );
+
+          if (filteredChapters.length === 0) {
+            console.warn(`Row ${row.index}: No English chapters found, falling back to all chapters.`);
+            filteredChapters = chapters;
           }
-          return c;
-        });
 
-        const lastUpdatedCell = updatedOrderedCells.find(
-          (c) => (c.column.alias ?? c.column.name) === 'Last Updated'
-        );
+          filteredChapters.forEach((chap: any, idx: number) => {
+            console.log(`Row ${row.index} - Chapter ${idx + 1}: chapter="${chap.attributes.chapter}", publishAt="${chap.attributes.publishAt}", updatedAt="${chap.attributes.updatedAt}", language="${chap.attributes.translatedLanguage}"`);
+          });
 
-        return {
-          ...row,
-          'Last Updated': formattedDate,
-          orderedCells: updatedOrderedCells,
-          cells: {
-            ...row.cells,
-            ...(lastUpdatedCell ? { 'Last Updated': lastUpdatedCell } : {}),
-          },
-        };
-      } catch (err) {
-        console.error(`Error fetching latest chapter for ${mangaId}:`, err);
-        return row;
-      }
-    }));
+          if (filteredChapters.length === 0) {
+            console.warn(`Row ${row.index}: No chapters found, returning original row.`);
+            return row;
+          }
 
-    // Sorting
+          const maxChapterNum = Math.max(
+            ...filteredChapters.map((chap: any) => parseChapterNumber(chap.attributes.chapter))
+          );
+
+          console.log(`Row ${row.index}: Max chapter number detected: ${maxChapterNum}`);
+
+          const candidates = filteredChapters.filter(
+            (chap: any) => parseChapterNumber(chap.attributes.chapter) === maxChapterNum
+          );
+
+          console.log(`Row ${row.index}: Candidates count with max chapter number: ${candidates.length}`);
+
+          // Pick chapter with earliest publishAt date among candidates
+          const selectedChapter = candidates.reduce((earliest: any | null, chap: any) => {
+            if (!earliest) return chap;
+            const earliestDate = new Date(earliest.attributes.publishAt);
+            const chapDate = new Date(chap.attributes.publishAt);
+            return chapDate < earliestDate ? chap : earliest;
+          }, null);
+
+          console.log(`Row ${row.index}: Selected chapter (highest chapter number & oldest publishAt):`, selectedChapter?.attributes);
+
+          // Use publishAt for "Last Updated" injection (not updatedAt)
+          const publishAt = selectedChapter?.attributes?.publishAt ?? null;
+          const formattedDate = publishAt ? new Date(publishAt).toLocaleString() : '';
+          const parsedDate = publishAt ? new Date(publishAt) : null;
+
+          const updatedOrderedCells = row.orderedCells.map((c: EtDataCell) => {
+            if ((c.column.alias ?? c.column.name) === 'Last Updated') {
+              return {
+                ...c,
+                rawValue: publishAt ?? '',
+                value: parsedDate,
+                formattedValue: formattedDate,
+              };
+            }
+            return c;
+          });
+
+          const lastUpdatedCell = updatedOrderedCells.find(
+            (c) => (c.column.alias ?? c.column.name) === 'Last Updated'
+          );
+
+          return {
+            ...row,
+            'Last Updated': formattedDate,
+            orderedCells: updatedOrderedCells,
+            cells: {
+              ...row.cells,
+              ...(lastUpdatedCell ? { 'Last Updated': lastUpdatedCell } : {}),
+            },
+          };
+        } catch (err) {
+          console.error(`Error fetching latest chapter for mangaId ${mangaId} in row ${row.index}:`, err);
+          return row;
+        }
+      })
+    );
+
+    const updated = updatedWithNulls.filter((r): r is EtDataRow => r !== null);
+
     if (isSortingByLastUpdated) {
       const desc = configuration.sort?.startsWith('-');
       updated.sort((a, b) => {
@@ -219,6 +274,7 @@ useEffect(() => {
       }
     }
 
+    console.log('Setting augmented rows with updated data');
     setAugmentedRows(updated);
   };
 
@@ -236,6 +292,15 @@ useEffect(() => {
     app.workspace.off('file-open', onFileChange);
   };
 }, [app, rows, setAugmentedRows, configuration.sort, indexedColumns]);
+
+
+
+
+
+
+
+
+
 
 
 

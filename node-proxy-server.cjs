@@ -11,7 +11,10 @@ app.use((req, res, next) => {
 
 app.get('/proxy/:id', async (req, res) => {
   const { id } = req.params;
-  const url = `https://api.mangadex.org/manga/${id}/feed?limit=1&translatedLanguage[]=en&order[updatedAt]=desc`;
+  // Support limit query param, default to 20 chapters if not provided
+  const limit = req.query.limit || 20;
+
+  const url = `https://api.mangadex.org/manga/${id}/feed?limit=${limit}&translatedLanguage[]=en&order[updatedAt]=desc`;
 
   try {
     const response = await fetch(url);
