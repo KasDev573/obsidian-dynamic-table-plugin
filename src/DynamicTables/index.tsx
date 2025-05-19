@@ -147,7 +147,6 @@ useEffect(() => {
 
     new Notice('Fetching manga update info...');
 
-    // Moved function declaration here, as per linting requirement
     function parseChapterNumber(chapterStr: string) {
       const num = parseFloat(chapterStr);
       return isNaN(num) ? 0 : num;
@@ -165,7 +164,7 @@ useEffect(() => {
         }
 
         try {
-          const proxyUrl = `http://localhost:3000/proxy/${mangaId}?limit=20`;
+          const proxyUrl = `http://localhost:3000/proxy/${mangaId}?limit=5`;
           const res = await fetch(proxyUrl);
           const json = await res.json();
 
@@ -181,10 +180,6 @@ useEffect(() => {
             filteredChapters = chapters;
           }
 
-          filteredChapters.forEach((chap: any, idx: number) => {
-            console.log(`Row ${row.index} - Chapter ${idx + 1}: chapter="${chap.attributes.chapter}", publishAt="${chap.attributes.publishAt}", updatedAt="${chap.attributes.updatedAt}", language="${chap.attributes.translatedLanguage}"`);
-          });
-
           if (filteredChapters.length === 0) {
             console.warn(`Row ${row.index}: No chapters found, returning original row.`);
             return row;
@@ -194,15 +189,10 @@ useEffect(() => {
             ...filteredChapters.map((chap: any) => parseChapterNumber(chap.attributes.chapter))
           );
 
-          console.log(`Row ${row.index}: Max chapter number detected: ${maxChapterNum}`);
-
           const candidates = filteredChapters.filter(
             (chap: any) => parseChapterNumber(chap.attributes.chapter) === maxChapterNum
           );
 
-          console.log(`Row ${row.index}: Candidates count with max chapter number: ${candidates.length}`);
-
-          // Pick chapter with earliest publishAt date among candidates
           const selectedChapter = candidates.reduce((earliest: any | null, chap: any) => {
             if (!earliest) return chap;
             const earliestDate = new Date(earliest.attributes.publishAt);
@@ -210,15 +200,38 @@ useEffect(() => {
             return chapDate < earliestDate ? chap : earliest;
           }, null);
 
-          console.log(`Row ${row.index}: Selected chapter (highest chapter number & oldest publishAt):`, selectedChapter?.attributes);
-
-          // Use publishAt for "Last Updated" injection (not updatedAt)
           const publishAt = selectedChapter?.attributes?.publishAt ?? null;
           const formattedDate = publishAt ? new Date(publishAt).toLocaleString() : '';
           const parsedDate = publishAt ? new Date(publishAt) : null;
 
+          // Compare "Last Read" vs Latest Chapter Number
+          const lastReadRaw = row.cells?.['Last Read']?.rawValue?.toString().trim();
+          const latestChapterNum = parseChapterNumber(selectedChapter?.attributes?.chapter ?? '');
+
+          let newIndicator = '';
+          if (lastReadRaw && !isNaN(Number(lastReadRaw))) {
+            const lastRead = parseFloat(lastReadRaw);
+            if (latestChapterNum > lastRead) {
+              newIndicator = '✅';
+              console.log(`Row ${row.index}: ✅ New chapter available (last read: ${lastRead}, latest: ${latestChapterNum})`);
+            } else {
+              console.log(`Row ${row.index}: No new chapter (last read: ${lastRead}, latest: ${latestChapterNum})`);
+            }
+          } else {
+            console.log(`Row ${row.index}: Invalid or missing Last Read value.`);
+          }
+
+          const newCell: EtDataCell = {
+            column: indexedColumns.find((c) => (c.alias ?? c.name) === 'New')!,
+            rawValue: newIndicator,
+            value: newIndicator,
+            formattedValue: newIndicator,
+            el: null as unknown as HTMLTableCellElement, // <-- temp placeholder; will be set later by renderer
+          };
+
           const updatedOrderedCells = row.orderedCells.map((c: EtDataCell) => {
-            if ((c.column.alias ?? c.column.name) === 'Last Updated') {
+            const columnName = c.column.alias ?? c.column.name;
+            if (columnName === 'Last Updated') {
               return {
                 ...c,
                 rawValue: publishAt ?? '',
@@ -226,20 +239,19 @@ useEffect(() => {
                 formattedValue: formattedDate,
               };
             }
+            if (columnName === 'New') {
+              return newCell;
+            }
             return c;
           });
 
-          const lastUpdatedCell = updatedOrderedCells.find(
-            (c) => (c.column.alias ?? c.column.name) === 'Last Updated'
-          );
-
           return {
             ...row,
-            'Last Updated': formattedDate,
             orderedCells: updatedOrderedCells,
             cells: {
               ...row.cells,
-              ...(lastUpdatedCell ? { 'Last Updated': lastUpdatedCell } : {}),
+              'Last Updated': updatedOrderedCells.find(c => (c.column.alias ?? c.column.name) === 'Last Updated')!,
+              'New': newCell,
             },
           };
         } catch (err) {
@@ -259,19 +271,6 @@ useEffect(() => {
         if (!dateA || !dateB) return 0;
         return desc ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
       });
-    } else if (configuration.sort) {
-      const sortValue = configuration.sort as string;
-      const sortField = sortValue.startsWith('-') ? sortValue.slice(1) : sortValue;
-
-      const sortFn = getSortingFunction(configuration.sort, indexedColumns);
-      if (sortFn) {
-        updated.sort((a, b) =>
-          sortFn(
-            (a.cells as Record<string, EtDataCell | undefined>)?.[sortField]?.value,
-            (b.cells as Record<string, EtDataCell | undefined>)?.[sortField]?.value
-          )
-        );
-      }
     }
 
     console.log('Setting augmented rows with updated data');
@@ -292,7 +291,6 @@ useEffect(() => {
     app.workspace.off('file-open', onFileChange);
   };
 }, [app, rows, setAugmentedRows, configuration.sort, indexedColumns]);
-
 
 
 
