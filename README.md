@@ -13,7 +13,7 @@ This plugin is an updated and extended version based on the original **Enhanced 
 filters:
   Headername:
     Example: "$row.columnTitle?.includes('true')"
-    Exampl2: "$row.columnTitle?.includes('true')"
+    Exampl2: "$row.columnTitle?.including('true')"
   OtherHeaderName:
     Example3: "$row.columnTitle?.includes('false')"
 ```
@@ -39,7 +39,7 @@ styleEnhancements:
   horizontalTextAlignment: left
   verticalTextAlignment: top
 ```
-
+10) I noticed that the `.includes` yaml function for filters was case sensitive. I added a `.including` function for filters that is case insensitive.
 
 ### Community Plugin
 - Open Settings > Third-party plugin
