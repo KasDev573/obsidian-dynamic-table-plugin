@@ -106,6 +106,7 @@ export function useDynamicTablesState(
   configuration: EtConfiguration,
   indexOfTheDynamicTable: number,
   tableData: RawTableData,
+  tableVersion: number,
 ) {
   const [sorting, setSorting] = useState<string | null>(configuration.sort ?? null);
   const [filtering, setFiltering] = useState<string[]>([]);
@@ -170,6 +171,8 @@ export function useDynamicTablesState(
 
   // Memoized processing of rows
   const rows = useMemo<EtDataRow[]>(() => {
+    void tableVersion;
+
     const dateFormat = configuration['date-format'] ?? DEFAULT_DATE_FORMAT;
     const datetimeFormat = configuration['datetime-format'] ?? DEFAULT_DATE_TIME_FORMAT;
     const yesFormat = configuration['yes-format'] ?? DEFAULT_BOOL_YES_INPUT;
@@ -319,6 +322,7 @@ export function useDynamicTablesState(
     sorting,
     pagination,
     indexedColumns,
+    tableVersion,
   ]);
 
   return {

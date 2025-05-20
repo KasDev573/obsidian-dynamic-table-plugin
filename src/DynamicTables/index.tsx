@@ -25,7 +25,7 @@ import * as css from 'css';
 import fs from 'fs';
 import path from 'path';
 import { getSortingFunction } from 'src/utils/sorting';
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Component } from 'obsidian';
 
 class WrapperComponent extends Component {}
@@ -100,6 +100,9 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
 
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
+  const [tableVersion, setTableVersion] = useState(0); // To help sort/search/fitler logic to update after injecting proxy server relayed info
+  const hasFetchedOnceRef = useRef(false);
+
   const {
     indexedColumns,
     rows,
@@ -114,7 +117,16 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
     setSearching,
     setAugmentedRows,
     augmentedRows,
-  } = useDynamicTablesState(app, configuration, indexOfTheDynamicTable, tableData);
+  } = useDynamicTablesState(app, configuration, indexOfTheDynamicTable, tableData, tableVersion);
+
+  console.log('[Debug] useDynamicTablesState output:');
+  console.log('rows:', rows);
+  console.log('augmentedRows:', augmentedRows);
+  console.log('filtering:', filtering);
+  console.log('sorting:', sorting);
+  console.log('searching:', searching);
+  console.log('[Debug] tableVersion:', tableVersion);
+
 
   const zebraStriping = configuration.styleEnhancements?.zebraStriping;
   const rowHoverHighlight = configuration.styleEnhancements?.rowHoverHighlight;
@@ -124,6 +136,9 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
   const stickyHeader = configuration.controls?.stickyHeader ?? false;
 
 useEffect(() => {
+  // ✅ STOP if we already fetched
+  if (hasFetchedOnceRef.current) return;
+
   const file = app.workspace.getActiveFile();
   if (!file) return;
 
@@ -144,6 +159,8 @@ useEffect(() => {
       console.info('Skipping MangaDex fetch: sort not Last Updated, column missing, or no valid links.');
       return;
     }
+
+    hasFetchedOnceRef.current = true; // ✅ Only mark as fetched if the fetch is valid
 
     new Notice('Fetching manga update info...');
 
@@ -263,18 +280,21 @@ useEffect(() => {
 
     const updated = updatedWithNulls.filter((r): r is EtDataRow => r !== null);
 
-    if (isSortingByLastUpdated) {
-      const desc = configuration.sort?.startsWith('-');
-      updated.sort((a, b) => {
-        const dateA = a.cells?.['Last Updated']?.value as Date;
-        const dateB = b.cells?.['Last Updated']?.value as Date;
-        if (!dateA || !dateB) return 0;
-        return desc ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
-      });
-    }
+//     if (isSortingByLastUpdated) {
+//       const desc = configuration.sort?.startsWith('-');
+//       updated.sort((a, b) => {
+//         const dateA = a.cells?.['Last Updated']?.value as Date;
+//         const dateB = b.cells?.['Last Updated']?.value as Date;
+//         if (!dateA || !dateB) return 0;
+//         return desc ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
+//       });
+//     }
 
     console.log('Setting augmented rows with updated data');
     setAugmentedRows(updated);
+    setTimeout(() => { // Re-update the info for the search/filter/sort functionality after the useeffect and retrieved injected data occurs
+      setTableVersion((v: number) => v + 1);
+    }, 0);
   };
 
   fetchLatestUpdates();
@@ -291,6 +311,7 @@ useEffect(() => {
     app.workspace.off('file-open', onFileChange);
   };
 }, [app, rows, setAugmentedRows, configuration.sort, indexedColumns]);
+
 
 
 
