@@ -25,7 +25,7 @@ import * as css from 'css';
 import fs from 'fs';
 import path from 'path';
 import { getSortingFunction } from 'src/utils/sorting';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Component } from 'obsidian';
 
 class WrapperComponent extends Component {}
@@ -100,7 +100,6 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
 
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
-  const [tableVersion, setTableVersion] = useState(0); // To help sort/search/fitler logic to update after injecting proxy server relayed info
   const hasFetchedOnceRef = useRef(false);
 
   const {
@@ -117,7 +116,7 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
     setSearching,
     setAugmentedRows,
     augmentedRows,
-  } = useDynamicTablesState(app, configuration, indexOfTheDynamicTable, tableData, tableVersion);
+  } = useDynamicTablesState(app, configuration, indexOfTheDynamicTable, tableData);
 
   console.log('[Debug] useDynamicTablesState output:');
   console.log('rows:', rows);
@@ -125,7 +124,7 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
   console.log('filtering:', filtering);
   console.log('sorting:', sorting);
   console.log('searching:', searching);
-  console.log('[Debug] tableVersion:', tableVersion);
+
 
 
   const zebraStriping = configuration.styleEnhancements?.zebraStriping;
@@ -292,9 +291,6 @@ useEffect(() => {
 
     console.log('Setting augmented rows with updated data');
     setAugmentedRows(updated);
-    setTimeout(() => { // Re-update the info for the search/filter/sort functionality after the useeffect and retrieved injected data occurs
-      setTableVersion((v: number) => v + 1);
-    }, 0);
   };
 
   fetchLatestUpdates();
@@ -332,7 +328,7 @@ useEffect(() => {
     const fileName = app.workspace.getActiveFile()?.basename ?? 'default';
     const checkboxStates = loadCheckboxStates(app, fileName);
 
-    (augmentedRows ?? rows).forEach((row: EtDataRow) => {
+    rows.forEach((row: EtDataRow) => {
       const tr = document.createElement('tr');
       tr.setAttribute('data-dt-row', row.index.toString());
 
