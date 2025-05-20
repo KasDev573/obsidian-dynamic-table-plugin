@@ -1,57 +1,114 @@
 # Dynamic Table Plugin for Obsidian
 
-A powerful and customizable dynamic table plugin for Obsidian that expands the [obsidian-enhanced-tables plugin](https://github.com/pistacchio/obsidian-enhanced-tables)
+A powerful and customizable dynamic table plugin for Obsidian that expands the functionality of the [Enhanced Tables plugin](https://github.com/pistacchio/obsidian-enhanced-tables).
 
-This plugin is an updated and extended version based on the original **Enhanced Tables** plugin by [pistacchio](https://github.com/pistacchio). Without their effort I would not have been able to get started on this work, I cannot thank them enough for their original work.
+This plugin is an updated and extended version of **Enhanced Tables** by [pistacchio](https://github.com/pistacchio). Their original work was foundational, and this project would not exist without it—huge thanks to them!
 
-# Whats new?
-1) Any functionality stacks. Meaning that you can sort by column title, the ascending/descending entries while having multiple filters active and being able to search to narrow things down even further all at the same time! Also, tweaked the search to have a 200ms delay after typing for it to search (instead of after every keystroke), this should still be smooth in general but this was to help optimize searching with large data sets.
-2) Checkboxes in Obsidian can be problematic especially with YAML, the best I found for some time was in [obsidian-table-checkboxes](https://github.com/0x-DLN/obsidian-table-checkboxes) with example `<input type="checkbox" unchecked id="cfa0fe">`, if you clicked their checkbox `<input type="checkbox" checked id="cfa0fe">` it would save the state in the markdown. However, with YAML and the enhanced table plugin, this would break the functionality, causing you to need to reload each time, which was not ideal. Now there is this: `<input type="checkbox" id="cfa0fe">` for this format instead I made a script that will export to a folder called `_checkbox-states` inside of your vault folder. This will save the states of those checkboxes externally to a JSON file without breaking the UI! This was necessary because the id format without checked or unchecked doesn't break the controls but also doesn't save if they have been checked for future sessions, hence my script. Also, I did make it so if you update your file name or delete your file it will adjust the appropriate JSON file as well. `(If you edit the file name refresh the document before checking boxes just to be safe)`
-3) I made it so you could filter a column by whether or not a checkbox was checked or unchecked, it must be `.includes` true or false for checked or unchecked boxes. Example below: (note the formatting for the filter, the only things to be changed are columnTitle to your column name, leave the ?, and also the headername to desired header and example to desired filter name)
+---
 
-``` 
-filters:
-  Headername:
-    Example: "$row.columnTitle?.includes('true')"
-    Exampl2: "$row.columnTitle?.including('true')"
-  OtherHeaderName:
-    Example3: "$row.columnTitle?.includes('false')"
-```
+## What's New?
 
-4) You may have noticed above with Headername: and OtherHeaderName:, I made it so you could have filter headers that appear above your grouped filters. This was for people who have lots of filters and wanted an easier time visually if you had a long dropdown due to numerous filters.
-5) I made it so you could control the UI view, whether or not you want the Sort, Search, or Filter sections to appear with a YAML config! Check below: (true = visible, false = not visible)
-6) I made another control option that turns the table into a container you can scroll, the header columns scroll with you too! In doing so the controls also are always in sight. You are not scrolling the page but the container. Simply set to `false` if you want to have a traditional page scroll.
-```
-controls:
-  showSort: true
-  showSearch: true
-  showFilter: true
-  stickyHeader: true
-```
-7) I added the ability to color every other row a bit darker for better visibility to the user to distinguish between rows. As well as hover effect. `styleEnhancements:` `zebraStriping: true` `  rowHoverHighlight: true` `horizontalTextAlignment: left`
-8) I added horizontal text alignment yaml option, the alignment has options `left` `center` `right`
-9) I added vertical text alignment yaml option, the alignment has options `top` `center` `bottom`
+1. **Fully Stackable Controls**
 
-```
-styleEnhancements:
-  zebraStriping: true
-  rowHoverHighlight: true
-  horizontalTextAlignment: left
-  verticalTextAlignment: top
-```
-10) I noticed that the `.includes` yaml function for filters was case sensitive. I added a `.including` function for filters that is case insensitive.
+   Sorting, filtering, and searching can all be used at the same time. The search now includes a 200ms debounce delay to improve performance with large datasets.
+
+
+2. **Persistent Checkboxes (Without Breaking UI)**
+
+   Traditional `<input type="checkbox" checked>` patterns break YAML configs in tables. This plugin instead uses `<input type="checkbox" id="xyz">`, and stores state externally in a `_checkbox-states` folder in your vault. State persists across sessions, even after file renames or deletions. *(Reminder: after renaming a file, refresh the document before checking boxes to ensure accuracy.)*
+
+
+3. **Checkbox Filter Support**
+
+   You can now filter columns based on whether checkboxes are checked or unchecked using expressions like:
+
+   ```yaml
+   filters:
+     Headername:
+       Example: "$row.columnTitle?.includes('true')"
+     OtherHeaderName:
+       Example2: "$row.columnTitle?.including('false')"
+   ```
+
+4. **Grouped Filter Headers**
+
+    Organize filters under visual headers for clarity when dealing with many filter options.
+
+
+5. **Toggle UI Components via YAML**
+
+     Enable or disable Sort, Search, and Filter sections:
+
+   ```yaml
+   controls:
+     showSort: true
+     showSearch: true
+     showFilter: true
+     stickyHeader: true
+   ```
+
+6. **Sticky Header & Scrollable Table Container**
+
+   Tables can now scroll independently while keeping headers and controls in view. Set `stickyHeader` to `false` to use traditional page scrolling.
+
+
+7. **Zebra Striping & Hover Highlighting**
+
+   Alternate row shading and row highlighting on hover can be enabled:
+
+   ```yaml
+   styleEnhancements:
+     zebraStriping: true
+     rowHoverHighlight: true
+   ```
+
+8. **Horizontal Text Alignment**
+
+   Set column alignment to `left`, `center`, or `right`:
+
+   ```yaml
+   styleEnhancements:
+     horizontalTextAlignment: left
+   ```
+
+9. **Vertical Text Alignment**
+
+   Set cell alignment to `top`, `center`, or `bottom`:
+
+   ```yaml
+   styleEnhancements:
+     verticalTextAlignment: top
+   ```
+
+10. **Case-Insensitive Filter Matching**
+
+    I noticed that the `.includes` YAML function for filters was case-sensitive. I added a `.including` function, which works the same way but performs case-insensitive matching instead. Meaning if you have red and Red or ReD, including will give you all of those results but the former .includes('red') would only give you red as a result.
+
+
+---
+
+## How to Install
 
 ### Community Plugin
-- Open Settings > Third-party plugin
-- Make sure Safe mode is off
-- Click Browse community plugins
-- Search for "Dynamic Table Plugin"
-- Click Install
-- Once installed, close the community plugins window and activate the newly installed plugin
 
-# Example of my YAML and Table
-If you want to copy the YAML or Table, check the Dynamic Table plugin settings
-### YAML Example
+1. Open **Settings > Third-party plugin**
+2. Make sure Safe Mode is **off**
+3. Click **Browse community plugins**
+4. Search for **"Dynamic Table Plugin"**
+5. Click **Install**, then activate it
+
+### Manual Installation
+
+1. Go to the [latest release](https://github.com/KasDev573/obsidian-dynamic-table-plugin/releases)
+2. Download `main.js`, `manifest.json`, and `styles.css` (if present)
+3. Place them into `.obsidian/plugins/dynamic-table-plugin` within your vault
+
+---
+
+## YAML Example
+
+Paste this into your document before a table to enable Dynamic Table features:
+
 ```yaml dynamic-table
 columns:
   Column A:
@@ -70,32 +127,57 @@ columns:
 filters:
   Example Header 1:
     Column A: "$row['Column A']?.includes('true')"
-    Column B: "$row['Column B']?.includes('false')"
+    Column B: "$row['Column B']?.including('false')"
 
 controls:
   showSort: true
   showSearch: true
   showFilter: true
-  
+  stickyHeader: true
+
 styleEnhancements:
   zebraStriping: true
   rowHoverHighlight: true
   horizontalTextAlignment: left
+  verticalTextAlignment: top
 
 hide-configuration: true
 ```
+
+---
+
 ## Table Example
-```
+
+```markdown
 | Column A                            | Column B                            | Column C |
-| ----------------------------------- | ----------------------------------- | -------- |
+| ---------------------------------- | ---------------------------------- | -------- |
 | <input type="checkbox" id="68aad5"> | <input type="checkbox" id="2b6727"> | Text1    |
 | <input type="checkbox" id="f797ca"> | <input type="checkbox" id="143b85"> | Text2    |
 | <input type="checkbox" id="c545ad"> | <input type="checkbox" id="e04729"> | Text3    |
 | <input type="checkbox" id="a8b8d4"> | <input type="checkbox" id="c9ec42"> | Text4    |
 ```
 
-# NOTE 
-For spacing they aren't tabs but 2 spaces. You have above `filters:` then the next line two spaces after is `Example Header 1:` then on the following line is `Column A:`, YAML is very strict with spacing and will break if you use stuff incorrectly. 
+---
+
+## ⚠️ YAML Spacing Warning
+
+* Use **2 spaces** for indentation (not tabs!)
+* Structure:
+
+  * `filters:` (no indent)
+
+    * `Example Header:` (2 spaces)
+
+      * `Column X:` (4 spaces)
+
+Incorrect indentation can cause the YAML to break.
+
+---
+
+Want to contribute or explore more? Visit the [GitHub repo](https://github.com/KasDev573/obsidian-dynamic-table-plugin).
+
+Thanks again to [pistacchio](https://github.com/pistacchio) for the foundation!
+
 
 
 --- 
