@@ -27,7 +27,7 @@ This plugin is an updated and extended version of **Enhanced Tables** by [pistac
      Headername:
        Example: "$row.columnTitle?.includes('true')"
      OtherHeaderName:
-       Example2: "$row.columnTitle?.including('false')"
+       Example2: "$row.columnTitle?.includes('false')"
    ```
 
 4. **Grouped Filter Headers**
