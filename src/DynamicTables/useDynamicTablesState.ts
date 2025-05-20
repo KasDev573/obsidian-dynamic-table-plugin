@@ -80,7 +80,11 @@ function addCustomFilterHelpersToRow(row: Record<string, any>): Record<string, a
         };
       }
 
-      return value;
+      // Return a fallback object for undefined or non-string values
+      return {
+        includes: () => false,
+        including: () => false,
+      };
     },
   });
 }
