@@ -109,6 +109,7 @@ This plugin is an updated and extended version of **Enhanced Tables** by [pistac
 
 Paste this into your document before a table to enable Dynamic Table features:
 
+<pre>
 ```yaml dynamic-table
 columns:
   Column A:
@@ -143,6 +144,7 @@ styleEnhancements:
 
 hide-configuration: true
 ```
+</pre>
 
 ---
 
