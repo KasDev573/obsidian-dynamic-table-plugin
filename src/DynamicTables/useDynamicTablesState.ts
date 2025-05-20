@@ -68,12 +68,32 @@ function loadCheckboxStates(app: App, fileName: string): Record<string, Checkbox
   return {};
 }
 
+function addCustomFilterHelpersToRow(row: Record<string, any>): Record<string, any> {
+  return new Proxy(row, {
+    get(target, prop) {
+      const value = target[prop as string];
+
+      if (typeof value === 'string') {
+        return {
+          includes: (substr: string) => value.includes(substr),
+          including: (substr: string) => value.toLowerCase().includes(substr.toLowerCase()),
+        };
+      }
+
+      return value;
+    },
+  });
+}
+
 // Cache filter expressions as compiled functions for reuse
 function createFilterFunctionCache(expressions: string[]) {
   const cache: Record<string, (row: Record<string, any>) => boolean> = {};
   for (const expr of expressions) {
     try {
-      cache[expr] = Function('$row', `return (${expr})`) as (row: Record<string, any>) => boolean;
+      cache[expr] = (row: Record<string, any>) => {
+        const proxiedRow = addCustomFilterHelpersToRow(row);
+        return Function('$row', `return (${expr})`)(proxiedRow);
+      };
     } catch {
       cache[expr] = () => false;
     }

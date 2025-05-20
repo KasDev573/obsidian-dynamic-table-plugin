@@ -181,7 +181,7 @@ columns:
 filters:
   Example Header 1:
     Column A: "$row['Column A']?.includes('true')"
-    Column B: "$row['Column B']?.includes('false')"
+    Column B: "$row['Column B']?.including('false')"
 
 controls:
   showSort: true
