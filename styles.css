@@ -178,6 +178,17 @@
   opacity: 1 !important;
 }
 
+.dynamic-table-sticky-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background-color: var(--background-primary);
+  z-index: -1;
+}
+
 .dynamic-table-sticky-header th {
   background-color: inherit; /* Inherit the full bar's background */
   border-bottom: 1px solid var(--background-modifier-border);
@@ -187,5 +198,10 @@
 .dynamic-table-scroll-container {
   max-height: 1200px;
   overflow-y: auto;
+}
+
+/* Header Row Cell Padding */
+.dynamic-table th {
+  padding: 0.5em 1em;
 }
 
