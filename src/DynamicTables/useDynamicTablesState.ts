@@ -72,31 +72,35 @@ function addCustomFilterHelpersToRow(row: Record<string, any>): Record<string, a
   return new Proxy(row, {
     get(target, prop) {
       const value = target[prop as string];
-
       if (typeof value === 'string') {
-        return {
-          includes: (substr: string) => value.includes(substr),
-          including: (substr: string) => value.toLowerCase().includes(substr.toLowerCase()),
-        };
+        const enhanced = new String(value);
+        (enhanced as any).includes = (substr: string) => value.includes(substr);
+        (enhanced as any).including = (substr: string) => value.toLowerCase().includes(substr.toLowerCase());
+        return enhanced;
       }
-
-      // Return a fallback object for undefined or non-string values
-      return {
-        includes: () => false,
-        including: () => false,
-      };
+      return value;
     },
   });
 }
 
-// Cache filter expressions as compiled functions for reuse
+
+function flattenRow(row: EtDataRow): Record<string, any> {
+  if (!row || !row.cells) return {};
+  const flat: Record<string, any> = {};
+  for (const [key, cell] of Object.entries(row.cells)) {
+    flat[key] = cell?.value;
+  }
+  return flat;
+}
+
+
 function createFilterFunctionCache(expressions: string[]) {
   const cache: Record<string, (row: Record<string, any>) => boolean> = {};
   for (const expr of expressions) {
     try {
-      cache[expr] = (row: Record<string, any>) => {
-        const proxiedRow = addCustomFilterHelpersToRow(row);
-        return Function('$row', `return (${expr})`)(proxiedRow);
+      cache[expr] = (flatRow: Record<string, any>) => {
+        const proxied = addCustomFilterHelpersToRow(flatRow);
+        return Function('$row', `return (${expr})`)(proxied);
       };
     } catch {
       cache[expr] = () => false;
@@ -104,6 +108,8 @@ function createFilterFunctionCache(expressions: string[]) {
   }
   return cache;
 }
+
+
 
 export function useDynamicTablesState(
   app: App,
@@ -209,23 +215,39 @@ export function useDynamicTablesState(
       });
     }
 
-    // Apply filtering
-    let filtered = processedRows;
+   // Apply filtering
+   let filtered = processedRows;
 
-    if (filtering.length > 0 || debouncedSearch) {
-      const lcSearch = debouncedSearch?.toLowerCase() ?? '';
-      const filterFns = createFilterFunctionCache(filtering);
+   const hasFilters = (filtering?.length ?? 0) > 0;
+   const hasSearch = (debouncedSearch?.length ?? 0) > 0;
 
-      filtered = filtered.filter(($row) => {
-        const matchesFilter = filtering.every((expr) => {
-          const fn = filterFns[expr];
-          return fn ? fn($row) : false;
-        });
+   if (hasFilters || hasSearch) {
+     const lcSearch = debouncedSearch?.toLowerCase() ?? '';
+     const filterFns = hasFilters ? createFilterFunctionCache(filtering) : {};
 
-        const matchesSearch = !lcSearch || $row.searchIndex.includes(lcSearch);
-        return matchesFilter && matchesSearch;
-      });
-    }
+     filtered = filtered.filter(($row) => {
+       const matchesSearch = !hasSearch || $row.searchIndex.includes(lcSearch);
+
+       if (!hasFilters) return matchesSearch;
+
+       try {
+         const flatRow = flattenRow($row);
+         const matchesFilter = filtering.every((expr) => {
+           const fn = filterFns[expr];
+           return fn ? fn(flatRow) : false;
+         });
+
+         return matchesFilter && matchesSearch;
+       } catch (e) {
+         console.error('Filter evaluation failed:', e);
+         return false;
+       }
+     });
+
+   }
+
+
+
 
     // Apply sorting
     if (sorting) {
