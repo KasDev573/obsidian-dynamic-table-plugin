@@ -27,6 +27,8 @@ import path from 'path';
 import { getSortingFunction } from 'src/utils/sorting';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Component } from 'obsidian';
+import { CheckboxStateManager } from '../CheckboxStateManager';
+
 
 class WrapperComponent extends Component {}
 
@@ -375,7 +377,7 @@ useEffect(() => {
           }
 
           const checkboxes = td.querySelectorAll<HTMLInputElement>('input[type="checkbox"][id]');
-          checkboxes.forEach((checkbox) => {
+          checkboxes.forEach((checkbox: HTMLInputElement) => {
             const id = checkbox.id;
             const saved = checkboxStates[id];
             if (saved) checkbox.checked = saved.checked;

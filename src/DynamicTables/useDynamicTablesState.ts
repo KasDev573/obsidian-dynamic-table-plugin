@@ -19,7 +19,7 @@ import {
   Pagination,
   RawTableData,
 } from 'src/utils/types';
-import { useCallback, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   makeFormatterForColumn,
   parseNumberFormat,
@@ -45,6 +45,8 @@ import fs from 'fs';
 import path from 'path';
 import { useDebounce } from 'src/utils/useDebounce';
 import { CheckboxMeta } from 'src/utils/types';
+import { setupCheckboxStateManager } from 'src/utils/setupCheckboxStateManager';
+import { CheckboxStateManager } from 'src/CheckboxStateManager';
 
 
 // Type definition for saved checkbox state metadata
@@ -117,6 +119,31 @@ export function useDynamicTablesState(
   indexOfTheDynamicTable: number,
   tableData: RawTableData,
 ) {
+const { injectCheckboxState } = setupCheckboxStateManager(app);
+useEffect(() => {
+  const file = app.workspace.getActiveFile();
+  if (!file) return;
+
+  const checkboxManager = new CheckboxStateManager(app);
+  const checkboxes: HTMLInputElement[] = [];
+
+  for (const row of tableData.rows) {
+    for (const cell of row) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = cell;
+      tempDiv.querySelectorAll<HTMLInputElement>('input[type="checkbox"][id]')
+        .forEach(cb => checkboxes.push(cb));
+    }
+  }
+
+  checkboxManager.initializeCheckboxes(file, checkboxes);
+  checkboxes.forEach((checkbox: HTMLInputElement) => {
+    checkbox.addEventListener('change', () => {
+      checkboxManager.handleCheckboxChange(file, checkbox);
+    });
+  });
+}, [app, tableData.rows]);
+
   const [sorting, setSorting] = useState<string | null>(configuration.sort ?? null);
   const [filtering, setFiltering] = useState<string[]>([]);
   const [searching, setSearching] = useState<string | null>(null);
@@ -180,21 +207,24 @@ export function useDynamicTablesState(
 
   // Memoized processing of rows
   const rows = useMemo<EtDataRow[]>(() => {
+    const fileName = app.workspace.getActiveFile()?.basename ?? 'default';
+    const checkboxStates = loadCheckboxStates(app, fileName);
+
+
     let processedRows: EtDataRow[];
 
     if (augmentedRows) {
-      // Use augmentedRows directly if available
       processedRows = augmentedRows;
     } else {
-      // Process tableData.rows (string[][]) into EtDataRow[]
       processedRows = tableData.rows.map((cells, rowIdx) => {
         const orderedCells: EtDataCell[] = cells.map((cellContent: string, cellIdx: number) => {
           const column = indexedColumns[cellIdx];
+
           return {
             column,
             rawValue: cellContent,
             value: cellContent,
-            el: column.el ?? document.createElement('span'),
+            el: document.createElement('td'),
             formattedValue: column.formatter(cellContent, {}, {
               app,
               data: { rows: [], columns: indexedColumns },
@@ -202,18 +232,52 @@ export function useDynamicTablesState(
           };
         });
 
+
+        const allCells = Object.fromEntries(
+          orderedCells.map((c) => [c.column.alias ?? c.column.name, c.value])
+        );
+
+        // ⬇️ Inject checkbox state here
+        Object.values(checkboxStates).forEach((meta) => {
+          const checkboxMeta = meta as CheckboxMeta;
+
+          if (checkboxMeta.rowIndex === rowIdx) {
+            const colName = checkboxMeta.column;
+            const currentValue = allCells[colName];
+            const valueToInject = checkboxMeta.checked ? 'true' : 'false';
+
+            if (typeof currentValue === 'string') {
+              if (!currentValue.includes(valueToInject)) {
+                allCells[colName] = `${currentValue} ${valueToInject}`.trim();
+              }
+            } else {
+              allCells[colName] = valueToInject;
+            }
+          }
+        });
+
+
+        const enrichedCells = orderedCells.map((c) => ({
+          ...c,
+          value: allCells[c.column.alias ?? c.column.name],
+          formattedValue: c.formattedValue,
+        }));
+
+        const searchIndex = enrichedCells
+          .filter((c) => c.column.searchable)
+          .map((c) => c.value?.toString().toLowerCase() ?? '')
+          .join(' ');
+
         return {
           index: rowIdx,
+          orderedCells: enrichedCells,
           el: document.createElement('table'),
-          orderedCells,
-          cells: Object.fromEntries(orderedCells.map((c) => [c.column.name, c])),
-          searchIndex: orderedCells
-            .filter((c) => c.column.searchable)
-            .map((c) => c.value?.toString().toLowerCase() ?? '')
-            .join(' '),
+          cells: Object.fromEntries(enrichedCells.map((c) => [c.column.name, c])),
+          searchIndex,
         };
       });
     }
+
 
    // Apply filtering
    let filtered = processedRows;
