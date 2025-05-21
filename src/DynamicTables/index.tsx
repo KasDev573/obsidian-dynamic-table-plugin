@@ -120,12 +120,12 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
     augmentedRows,
   } = useDynamicTablesState(app, configuration, indexOfTheDynamicTable, tableData);
 
-  console.log('[Debug] useDynamicTablesState output:');
-  console.log('rows:', rows);
-  console.log('augmentedRows:', augmentedRows);
-  console.log('filtering:', filtering);
-  console.log('sorting:', sorting);
-  console.log('searching:', searching);
+//   console.log('[Debug] useDynamicTablesState output:');
+//   console.log('rows:', rows);
+//   console.log('augmentedRows:', augmentedRows);
+//   console.log('filtering:', filtering);
+//   console.log('sorting:', sorting);
+//   console.log('searching:', searching);
 
 
 
@@ -187,7 +187,7 @@ useEffect(() => {
           const json = await res.json();
 
           const chapters = json.data ?? [];
-          console.log(`Row ${row.index}: Fetched ${chapters.length} chapters for manga ID ${mangaId}`);
+//           console.log(`Row ${row.index}: Fetched ${chapters.length} chapters for manga ID ${mangaId}`);
 
           let filteredChapters = chapters.filter(
             (chap: any) => chap.attributes.translatedLanguage === 'en'
@@ -231,12 +231,12 @@ useEffect(() => {
             const lastRead = parseFloat(lastReadRaw);
             if (latestChapterNum > lastRead) {
               newIndicator = '✅';
-              console.log(`Row ${row.index}: ✅ New chapter available (last read: ${lastRead}, latest: ${latestChapterNum})`);
+//               console.log(`Row ${row.index}: ✅ New chapter available (last read: ${lastRead}, latest: ${latestChapterNum})`);
             } else {
-              console.log(`Row ${row.index}: No new chapter (last read: ${lastRead}, latest: ${latestChapterNum})`);
+//               console.log(`Row ${row.index}: No new chapter (last read: ${lastRead}, latest: ${latestChapterNum})`);
             }
           } else {
-            console.log(`Row ${row.index}: Invalid or missing Last Read value.`);
+//             console.log(`Row ${row.index}: Invalid or missing Last Read value.`);
           }
 
           const newCell: EtDataCell = {
@@ -291,7 +291,7 @@ useEffect(() => {
 //       });
 //     }
 
-    console.log('Setting augmented rows with updated data');
+//     console.log('Setting augmented rows with updated data');
     setAugmentedRows(updated);
   };
 
