@@ -27,6 +27,8 @@ import path from 'path';
 import { getSortingFunction } from 'src/utils/sorting';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Component } from 'obsidian';
+import { CheckboxStateManager } from '../CheckboxStateManager';
+
 
 class WrapperComponent extends Component {}
 
@@ -100,6 +102,8 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
 
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
+  const hasFetchedOnceRef = useRef(false);
+
   const {
     indexedColumns,
     rows,
@@ -116,6 +120,15 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
     augmentedRows,
   } = useDynamicTablesState(app, configuration, indexOfTheDynamicTable, tableData);
 
+  console.log('[Debug] useDynamicTablesState output:');
+  console.log('rows:', rows);
+  console.log('augmentedRows:', augmentedRows);
+  console.log('filtering:', filtering);
+  console.log('sorting:', sorting);
+  console.log('searching:', searching);
+
+
+
   const zebraStriping = configuration.styleEnhancements?.zebraStriping;
   const rowHoverHighlight = configuration.styleEnhancements?.rowHoverHighlight;
   const horizontalTextAlignment = configuration.styleEnhancements?.horizontalTextAlignment ?? 'left';
@@ -124,6 +137,9 @@ export const DynamicTables: React.FC<DynamicTablesProps> = ({
   const stickyHeader = configuration.controls?.stickyHeader ?? false;
 
 useEffect(() => {
+  // ✅ STOP if we already fetched
+  if (hasFetchedOnceRef.current) return;
+
   const file = app.workspace.getActiveFile();
   if (!file) return;
 
@@ -144,6 +160,8 @@ useEffect(() => {
       console.info('Skipping MangaDex fetch: sort not Last Updated, column missing, or no valid links.');
       return;
     }
+
+    hasFetchedOnceRef.current = true; // ✅ Only mark as fetched if the fetch is valid
 
     new Notice('Fetching manga update info...');
 
@@ -263,15 +281,15 @@ useEffect(() => {
 
     const updated = updatedWithNulls.filter((r): r is EtDataRow => r !== null);
 
-    if (isSortingByLastUpdated) {
-      const desc = configuration.sort?.startsWith('-');
-      updated.sort((a, b) => {
-        const dateA = a.cells?.['Last Updated']?.value as Date;
-        const dateB = b.cells?.['Last Updated']?.value as Date;
-        if (!dateA || !dateB) return 0;
-        return desc ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
-      });
-    }
+//     if (isSortingByLastUpdated) {
+//       const desc = configuration.sort?.startsWith('-');
+//       updated.sort((a, b) => {
+//         const dateA = a.cells?.['Last Updated']?.value as Date;
+//         const dateB = b.cells?.['Last Updated']?.value as Date;
+//         if (!dateA || !dateB) return 0;
+//         return desc ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
+//       });
+//     }
 
     console.log('Setting augmented rows with updated data');
     setAugmentedRows(updated);
@@ -304,6 +322,7 @@ useEffect(() => {
 
 
 
+
   useEffect(() => {
     if (!tbodyRef.current) return;
     tbodyRef.current.textContent = '';
@@ -311,7 +330,7 @@ useEffect(() => {
     const fileName = app.workspace.getActiveFile()?.basename ?? 'default';
     const checkboxStates = loadCheckboxStates(app, fileName);
 
-    (augmentedRows ?? rows).forEach((row: EtDataRow) => {
+    rows.forEach((row: EtDataRow) => {
       const tr = document.createElement('tr');
       tr.setAttribute('data-dt-row', row.index.toString());
 
@@ -358,11 +377,18 @@ useEffect(() => {
           }
 
           const checkboxes = td.querySelectorAll<HTMLInputElement>('input[type="checkbox"][id]');
-          checkboxes.forEach((checkbox) => {
-            const id = checkbox.id;
-            const saved = checkboxStates[id];
-            if (saved) checkbox.checked = saved.checked;
+          let didUpdate = false;
 
+          checkboxes.forEach((checkbox: HTMLInputElement) => {
+            const id = checkbox.id;
+
+            // Restore saved state if available
+            const saved = checkboxStates[id];
+            if (saved) {
+              checkbox.checked = saved.checked;
+            }
+
+            // Register change listener
             checkbox.addEventListener('change', () => {
               checkboxStates[id] = {
                 checked: checkbox.checked,
@@ -371,7 +397,23 @@ useEffect(() => {
               };
               saveCheckboxStates(app, fileName, checkboxStates);
             });
+
+            // Batch initialize state if not already tracked
+            if (!checkboxStates[id]) {
+              checkboxStates[id] = {
+                checked: checkbox.checked,
+                rowIndex: row.index,
+                column: cell.column.alias || cell.column.name,
+              };
+              didUpdate = true;
+            }
           });
+
+          if (didUpdate) {
+            saveCheckboxStates(app, fileName, checkboxStates);
+          }
+
+
 
           const onValueChange = (newVal: string) => {
             const modifiedRowValues = row.orderedCells.map((c: EtDataCell, i: number) =>

@@ -65,4 +65,17 @@ export class CheckboxStateManager {
     data[checkboxId] = checked;
     await this.app.vault.adapter.write(path, JSON.stringify(data));
   }
+
+  public async initializeCheckboxes(file: TFile, checkboxes: Iterable<HTMLInputElement>) {
+    const state = await this.loadStates(file);
+    for (const cb of checkboxes) {
+      if (state[cb.id] !== undefined) {
+        cb.checked = state[cb.id];
+      }
+    }
+  }
+
+  public async handleCheckboxChange(file: TFile, checkbox: HTMLInputElement) {
+    await this.saveState(file, checkbox.id, checkbox.checked);
+  }
 }

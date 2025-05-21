@@ -19,7 +19,7 @@ import {
   Pagination,
   RawTableData,
 } from 'src/utils/types';
-import { useCallback, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   makeFormatterForColumn,
   parseNumberFormat,
@@ -45,6 +45,8 @@ import fs from 'fs';
 import path from 'path';
 import { useDebounce } from 'src/utils/useDebounce';
 import { CheckboxMeta } from 'src/utils/types';
+import { setupCheckboxStateManager } from 'src/utils/setupCheckboxStateManager';
+import { CheckboxStateManager } from 'src/CheckboxStateManager';
 
 
 // Type definition for saved checkbox state metadata
@@ -72,27 +74,35 @@ function addCustomFilterHelpersToRow(row: Record<string, any>): Record<string, a
   return new Proxy(row, {
     get(target, prop) {
       const value = target[prop as string];
-
       if (typeof value === 'string') {
-        return {
-          includes: (substr: string) => value.includes(substr),
-          including: (substr: string) => value.toLowerCase().includes(substr.toLowerCase()),
-        };
+        const enhanced = new String(value);
+        (enhanced as any).includes = (substr: string) => value.includes(substr);
+        (enhanced as any).including = (substr: string) => value.toLowerCase().includes(substr.toLowerCase());
+        return enhanced;
       }
-
       return value;
     },
   });
 }
 
-// Cache filter expressions as compiled functions for reuse
+
+function flattenRow(row: EtDataRow): Record<string, any> {
+  if (!row || !row.cells) return {};
+  const flat: Record<string, any> = {};
+  for (const [key, cell] of Object.entries(row.cells)) {
+    flat[key] = cell?.value;
+  }
+  return flat;
+}
+
+
 function createFilterFunctionCache(expressions: string[]) {
   const cache: Record<string, (row: Record<string, any>) => boolean> = {};
   for (const expr of expressions) {
     try {
-      cache[expr] = (row: Record<string, any>) => {
-        const proxiedRow = addCustomFilterHelpersToRow(row);
-        return Function('$row', `return (${expr})`)(proxiedRow);
+      cache[expr] = (flatRow: Record<string, any>) => {
+        const proxied = addCustomFilterHelpersToRow(flatRow);
+        return Function('$row', `return (${expr})`)(proxied);
       };
     } catch {
       cache[expr] = () => false;
@@ -101,12 +111,39 @@ function createFilterFunctionCache(expressions: string[]) {
   return cache;
 }
 
+
+
 export function useDynamicTablesState(
   app: App,
   configuration: EtConfiguration,
   indexOfTheDynamicTable: number,
   tableData: RawTableData,
 ) {
+const { injectCheckboxState } = setupCheckboxStateManager(app);
+useEffect(() => {
+  const file = app.workspace.getActiveFile();
+  if (!file) return;
+
+  const checkboxManager = new CheckboxStateManager(app);
+  const checkboxes: HTMLInputElement[] = [];
+
+  for (const row of tableData.rows) {
+    for (const cell of row) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = cell;
+      tempDiv.querySelectorAll<HTMLInputElement>('input[type="checkbox"][id]')
+        .forEach(cb => checkboxes.push(cb));
+    }
+  }
+
+  checkboxManager.initializeCheckboxes(file, checkboxes);
+  checkboxes.forEach((checkbox: HTMLInputElement) => {
+    checkbox.addEventListener('change', () => {
+      checkboxManager.handleCheckboxChange(file, checkbox);
+    });
+  });
+}, [app, tableData.rows]);
+
   const [sorting, setSorting] = useState<string | null>(configuration.sort ?? null);
   const [filtering, setFiltering] = useState<string[]>([]);
   const [searching, setSearching] = useState<string | null>(null);
@@ -170,156 +207,151 @@ export function useDynamicTablesState(
 
   // Memoized processing of rows
   const rows = useMemo<EtDataRow[]>(() => {
-    const dateFormat = configuration['date-format'] ?? DEFAULT_DATE_FORMAT;
-    const datetimeFormat = configuration['datetime-format'] ?? DEFAULT_DATE_TIME_FORMAT;
-    const yesFormat = configuration['yes-format'] ?? DEFAULT_BOOL_YES_INPUT;
-
-    const currentContent = app.workspace.getActiveViewOfType(MarkdownView)?.data ?? '';
-    const tableManager = new TableManager();
-    const rawTableLines = tableManager.readTableLines(currentContent, indexOfTheDynamicTable);
-
     const fileName = app.workspace.getActiveFile()?.basename ?? 'default';
-    const adapter = app.vault.adapter;
-    let filePath = '';
-    if (adapter instanceof FileSystemAdapter) {
-      filePath = path.join(adapter.getBasePath(), '_checkbox-states', `${fileName}.json`);
-    }
-
     const checkboxStates = loadCheckboxStates(app, fileName);
-    let updated = false;
 
-    let result: EtDataRow[] = tableData.rows.map((cells, rowIdx) => {
-      const orderedCells: EtDataCell[] = cells.map((cellContent, cellIdx) => {
-        const column = indexedColumns[cellIdx];
-        const format =
-          column.type === 'datetime' ? datetimeFormat :
-          column.type === 'time' ? DEFAULT_TIME_FORMAT :
-          dateFormat;
 
-        const value = extractValue(cellContent, column, format, yesFormat);
-        const raw = rawTableLines?.[rowIdx + 2]?.[cellIdx] ?? '';
-        const isCheckbox = raw.includes('type="checkbox"');
-        if (isCheckbox) {
-          const match = raw.match(/id="([^"]+)"/);
-          const checkboxId = match?.[1];
-          const isChecked = raw.includes('checked');
+    let processedRows: EtDataRow[];
 
-          if (checkboxId && !checkboxStates[checkboxId]) {
-            checkboxStates[checkboxId] = {
-              rowIndex: rowIdx,
-              column: column.name,
-              checked: isChecked,
-            };
-            updated = true;
-          }
-        }
+    if (augmentedRows) {
+      processedRows = augmentedRows;
+    } else {
+      processedRows = tableData.rows.map((cells, rowIdx) => {
+        const orderedCells: EtDataCell[] = cells.map((cellContent: string, cellIdx: number) => {
+          const column = indexedColumns[cellIdx];
 
-        return {
-          column,
-          rawValue: raw,
-          value,
-          el: column.el,
-          formattedValue: column.formatter(value, {}, {
-            app,
-            data: { rows: [], columns: indexedColumns },
-          }),
-        };
-      });
-
-      const allCells = Object.fromEntries(
-        orderedCells.map((c) => [c.column.alias ?? c.column.name, c.value])
-      );
-
-      Object.values(checkboxStates).forEach((meta) => {
-        if (meta.rowIndex === rowIdx) {
-          const colName = meta.column;
-          const currentValue = allCells[colName];
-          const valueToInject = meta.checked ? 'true' : 'false';
-
-          if (typeof currentValue === 'string') {
-            if (!currentValue.includes(valueToInject)) {
-              allCells[colName] = `${currentValue} ${valueToInject}`.trim();
-            }
-          } else {
-            allCells[colName] = valueToInject;
-          }
-        }
-      });
-
-      const enrichedCells = orderedCells.map((c) => ({
-        ...c,
-        value: allCells[c.column.alias ?? c.column.name],
-        formattedValue: c.formattedValue,
-      }));
-
-      const searchIndex = enrichedCells
-        .filter((c) => c.column.searchable)
-        .map((c) => c.value?.toString().toLowerCase() ?? '')
-        .join(' ');
-
-      return {
-        index: rowIdx,
-        orderedCells: enrichedCells,
-        el: document.createElement('table'),
-        cells: Object.fromEntries(enrichedCells.map((c) => [c.column.name, c])),
-        searchIndex,
-        ...allCells,
-      };
-    });
-
-    if (updated && filePath) {
-      try {
-        fs.writeFileSync(filePath, JSON.stringify(checkboxStates, null, 2));
-      } catch (e) {
-        console.error('Failed to write updated checkbox state file', e);
-      }
-    }
-
-    const filterFns = createFilterFunctionCache(filtering);
-    const lcSearch = debouncedSearch?.toLowerCase() ?? '';
-
-    if (filtering.length > 0 || lcSearch) {
-      result = result.filter(($row) => {
-        const matchesFilter = filtering.every((expr) => {
-          const fn = filterFns[expr];
-          return fn ? fn($row) : false;
+          return {
+            column,
+            rawValue: cellContent,
+            value: cellContent,
+            el: document.createElement('td'),
+            formattedValue: column.formatter(cellContent, {}, {
+              app,
+              data: { rows: [], columns: indexedColumns },
+            }),
+          };
         });
 
-        const matchesSearch = !lcSearch || $row.searchIndex.includes(lcSearch);
 
-        return matchesFilter && matchesSearch;
+        const allCells = Object.fromEntries(
+          orderedCells.map((c) => [c.column.alias ?? c.column.name, c.value])
+        );
+
+        // ⬇️ Inject checkbox state here
+        Object.values(checkboxStates).forEach((meta) => {
+          const checkboxMeta = meta as CheckboxMeta;
+
+          if (checkboxMeta.rowIndex === rowIdx) {
+            const colName = checkboxMeta.column;
+            const currentValue = allCells[colName];
+            const valueToInject = checkboxMeta.checked ? 'true' : 'false';
+
+            if (typeof currentValue === 'string') {
+              if (!currentValue.includes(valueToInject)) {
+                allCells[colName] = `${currentValue} ${valueToInject}`.trim();
+              }
+            } else {
+              allCells[colName] = valueToInject;
+            }
+          }
+        });
+
+
+        const enrichedCells = orderedCells.map((c) => ({
+          ...c,
+          value: allCells[c.column.alias ?? c.column.name],
+          formattedValue: c.formattedValue,
+        }));
+
+        const searchIndex = enrichedCells
+          .filter((c) => c.column.searchable)
+          .map((c) => c.value?.toString().toLowerCase() ?? '')
+          .join(' ');
+
+        return {
+          index: rowIdx,
+          orderedCells: enrichedCells,
+          el: document.createElement('table'),
+          cells: Object.fromEntries(enrichedCells.map((c) => [c.column.name, c])),
+          searchIndex,
+        };
       });
     }
 
+
+   // Apply filtering
+   let filtered = processedRows;
+
+   const hasFilters = (filtering?.length ?? 0) > 0;
+   const hasSearch = (debouncedSearch?.length ?? 0) > 0;
+
+   if (hasFilters || hasSearch) {
+     const lcSearch = debouncedSearch?.toLowerCase() ?? '';
+     const filterFns = hasFilters ? createFilterFunctionCache(filtering) : {};
+
+     filtered = filtered.filter(($row) => {
+       const matchesSearch = !hasSearch || $row.searchIndex.includes(lcSearch);
+
+       if (!hasFilters) return matchesSearch;
+
+       try {
+         const flatRow = flattenRow($row);
+         const matchesFilter = filtering.every((expr) => {
+           const fn = filterFns[expr];
+           return fn ? fn(flatRow) : false;
+         });
+
+         return matchesFilter && matchesSearch;
+       } catch (e) {
+         console.error('Filter evaluation failed:', e);
+         return false;
+       }
+     });
+
+   }
+
+
+
+
+    // Apply sorting
     if (sorting) {
       const sortFn = getSortingFunction(sorting, indexedColumns);
       if (sortFn) {
         const sortField = sorting.startsWith('-') ? sorting.slice(1) : sorting;
-        result.sort((a, b) => sortFn(a[sortField], b[sortField]));
+        const isDescending = sorting.startsWith('-');
+        filtered = [...filtered].sort((a, b) => {
+          const aValue = a.cells[sortField]?.value;
+          const bValue = b.cells[sortField]?.value;
+
+          if (aValue < bValue) return isDescending ? 1 : -1;
+          if (aValue > bValue) return isDescending ? -1 : 1;
+          return 0;
+        });
       }
     }
 
-    setTotalNumberOfUnpaginatedRows(result.length);
+    setTotalNumberOfUnpaginatedRows(filtered.length);
 
+    // Apply pagination
     if (pagination) {
-      result = result.slice(
+      filtered = filtered.slice(
         pagination.pageSize * (pagination.pageNumber - 1),
-        pagination.pageSize * pagination.pageNumber,
+        pagination.pageSize * pagination.pageNumber
       );
     }
 
-    return result;
+    return filtered;
   }, [
-    indexOfTheDynamicTable,
-    app,
-    configuration,
-    tableData,
+    augmentedRows,
+    tableData.rows,
     filtering,
     debouncedSearch,
     sorting,
     pagination,
     indexedColumns,
+    app,
   ]);
+
 
   return {
     indexedColumns,
