@@ -392,6 +392,26 @@ useEffect(() => {
             });
           });
 
+          // Ensure all discovered checkboxes are in the state map
+          let didUpdate = false;
+
+          checkboxes.forEach((checkbox) => {
+            const id = checkbox.id;
+            if (!checkboxStates[id]) {
+              checkboxStates[id] = {
+                checked: checkbox.checked,
+                rowIndex: row.index,
+                column: cell.column.alias || cell.column.name,
+              };
+              didUpdate = true;
+            }
+          });
+
+          if (didUpdate) {
+            saveCheckboxStates(app, fileName, checkboxStates);
+          }
+
+
           const onValueChange = (newVal: string) => {
             const modifiedRowValues = row.orderedCells.map((c: EtDataCell, i: number) =>
               i === idx2 ? newVal : c.rawValue
