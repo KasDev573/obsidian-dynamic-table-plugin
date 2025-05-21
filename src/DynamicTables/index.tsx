@@ -377,11 +377,18 @@ useEffect(() => {
           }
 
           const checkboxes = td.querySelectorAll<HTMLInputElement>('input[type="checkbox"][id]');
+          let didUpdate = false;
+
           checkboxes.forEach((checkbox: HTMLInputElement) => {
             const id = checkbox.id;
-            const saved = checkboxStates[id];
-            if (saved) checkbox.checked = saved.checked;
 
+            // Restore saved state if available
+            const saved = checkboxStates[id];
+            if (saved) {
+              checkbox.checked = saved.checked;
+            }
+
+            // Register change listener
             checkbox.addEventListener('change', () => {
               checkboxStates[id] = {
                 checked: checkbox.checked,
@@ -390,13 +397,8 @@ useEffect(() => {
               };
               saveCheckboxStates(app, fileName, checkboxStates);
             });
-          });
 
-          // Ensure all discovered checkboxes are in the state map
-          let didUpdate = false;
-
-          checkboxes.forEach((checkbox) => {
-            const id = checkbox.id;
+            // Batch initialize state if not already tracked
             if (!checkboxStates[id]) {
               checkboxStates[id] = {
                 checked: checkbox.checked,
@@ -410,6 +412,7 @@ useEffect(() => {
           if (didUpdate) {
             saveCheckboxStates(app, fileName, checkboxStates);
           }
+
 
 
           const onValueChange = (newVal: string) => {
