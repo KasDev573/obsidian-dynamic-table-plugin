@@ -105,7 +105,7 @@ export function makeEditor(
     case 'string':
     case 'number': {
       let editor: HTMLElement;
-      const currentValue = td.innerHTML;
+      const currentValue = td.textContent ?? "";
 
       // Click handler to switch cell to editing mode
       const onClickHandler = () => {
@@ -114,7 +114,7 @@ export function makeEditor(
 
         // Create contenteditable div for input
         editor = document.createElement('div');
-        editor.innerHTML = cell.rawValue;
+        editor.textContent = cell.rawValue;
         editor.setAttribute('contenteditable', 'true');
 
         // Create buttons container for Cancel and Done
@@ -135,9 +135,9 @@ export function makeEditor(
         makeButton(buttonsContainer, 'Done', () => {
           if (cell.column.type === 'number') {
             // Remove non-numeric characters
-            editor.innerHTML = editor.innerHTML.replace(/[^0-9]/g, '');
+            editor.textContent = editor.textContent?.replace(/[^0-9]/g, '') ?? '';
           }
-          onChange(editor.innerHTML);
+          onChange(editor.textContent ?? "");
         });
 
         // Append editor and buttons to the cell
@@ -150,7 +150,7 @@ export function makeEditor(
       // Support Esc key to commit edit early
       td.addEventListener('keyup', (e) => {
         if (e.key === 'Escape') {
-          onChange(editor.innerHTML);
+          onChange(editor.textContent ?? '');
         }
       });
 
@@ -171,7 +171,7 @@ export function makeEditor(
     case 'date':
     case 'datetime':
     case 'time': {
-      const currentValue = td.innerHTML;
+      const currentValue = td.textContent ?? "";
       // Determine output format based on column type and table config
       const outputFormat = (() => {
         if (cell.column.type === 'time') {
@@ -236,7 +236,7 @@ export function makeEditor(
 
     // Enum editor creates a dropdown select element with options from column enum map
     case 'enum': {
-      const currentValue = td.innerHTML;
+      const currentValue = td.textContent ?? "";
 
       const onClickHandler = () => {
         td.removeEventListener('click', onClickHandler);
@@ -260,7 +260,7 @@ export function makeEditor(
         )) {
           const option = document.createElement('option');
           option.value = enumValue;
-          option.innerHTML = enumRepresentation;
+          option.textContent = enumRepresentation;
 
           if (enumValue === cell.value) {
             option.selected = true;
@@ -295,7 +295,7 @@ export function makeEditor(
 
     // Bool editor uses a checkbox with configurable true/false text formats
     case 'bool': {
-      const currentValue = td.innerHTML;
+      const currentValue = td.textContent ?? "";
 
       const onClickHandler = () => {
         td.removeEventListener('click', onClickHandler);
