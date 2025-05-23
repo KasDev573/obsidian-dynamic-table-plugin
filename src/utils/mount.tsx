@@ -191,14 +191,14 @@ function lookUpForTheYamlCode(element: HTMLElement): HTMLElement | null {
 
 function extractRawTableData(element: HTMLTableElement): RawTableData {
   const columns = (element.findAll('thead > tr > th') ?? []).map(
-    (cell) => cell.innerHTML,
+    (cell) => cell.textContent ?? '',
   );
 
   const rows = (element.findAll('tbody > tr') ?? []).map(
     (row: HTMLTableRowElement) => {
       return row
         .findAll('td')
-        .map((cell: HTMLTableCellElement) => cell.innerHTML);
+        .map((cell: HTMLTableCellElement) => cell.textContent ?? '');
     },
   );
 
