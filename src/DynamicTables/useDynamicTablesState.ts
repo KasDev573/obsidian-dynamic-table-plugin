@@ -39,7 +39,7 @@ import {
 import { extractValue } from 'src/utils/values';
 import { getSortingFunction } from 'src/utils/sorting';
 import { PaginationOptions } from 'src/DynamicTables/components/PaginationView';
-import { App, FileSystemAdapter, MarkdownView } from 'obsidian';
+import { App, FileSystemAdapter, MarkdownView, MarkdownRenderer, Component } from 'obsidian';
 import { TableManager } from 'src/TableManager';
 import fs from 'fs';
 import path from 'path';
@@ -121,28 +121,44 @@ export function useDynamicTablesState(
 ) {
 const { injectCheckboxState } = setupCheckboxStateManager(app);
 useEffect(() => {
-  const file = app.workspace.getActiveFile();
-  if (!file) return;
+  const component = new Component(); // Declare here so it's in scope for both run and cleanup
 
-  const checkboxManager = new CheckboxStateManager(app);
-  const checkboxes: HTMLInputElement[] = [];
+  const run = async () => {
+    const file = app.workspace.getActiveFile();
+    if (!file) return;
 
-  for (const row of tableData.rows) {
-    for (const cell of row) {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = cell;
-      tempDiv.querySelectorAll<HTMLInputElement>('input[type="checkbox"][id]')
-        .forEach(cb => checkboxes.push(cb));
+    const checkboxManager = new CheckboxStateManager(app);
+    const checkboxes: HTMLInputElement[] = [];
+
+    for (const row of tableData.rows) {
+      for (const cell of row) {
+        const cellDiv = document.createElement("div");
+
+        // Use the component here
+        await MarkdownRenderer.renderMarkdown(cell, cellDiv, file.path, component);
+
+        cellDiv.querySelectorAll<HTMLInputElement>('input[type="checkbox"][id]')
+          .forEach(cb => checkboxes.push(cb));
+      }
     }
-  }
 
-  checkboxManager.initializeCheckboxes(file, checkboxes);
-  checkboxes.forEach((checkbox: HTMLInputElement) => {
-    checkbox.addEventListener('change', () => {
-      checkboxManager.handleCheckboxChange(file, checkbox);
+    checkboxManager.initializeCheckboxes(file, checkboxes);
+
+    checkboxes.forEach((checkbox: HTMLInputElement) => {
+      checkbox.addEventListener('change', () => {
+        checkboxManager.handleCheckboxChange(file, checkbox);
+      });
     });
-  });
-}, [app, tableData.rows]);
+  };
+
+  run();
+
+  // Cleanup function has access to component
+  return () => {
+    component.unload();
+  };
+}, [tableData.rows, app]);
+
 
   const [sorting, setSorting] = useState<string | null>(configuration.sort ?? null);
   const [filtering, setFiltering] = useState<string[]>([]);
