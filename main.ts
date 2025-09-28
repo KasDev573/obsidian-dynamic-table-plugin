@@ -24,6 +24,8 @@ import {
   mountDynamicTables,
 } from 'src/utils/mount';
 
+import { registerCalloutCheckboxSync } from "src/calloutCheckboxSync";
+
 import { TableManager } from 'src/TableManager';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -37,6 +39,8 @@ export default class DynamicTablePlugin extends Plugin {
 
   async onload() {
     this.addSettingTab(new DynamicTablesSettingTab(this.app, this));
+
+    registerCalloutCheckboxSync(this, () => this.getVaultBasePath()); // Callout functionality
 
     this.registerMarkdownPostProcessor(async (el, ctx) => {
       try {
