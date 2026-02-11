@@ -2,7 +2,7 @@
 
 A dynamic table plugin for Obsidian that expands the functionality of the [Enhanced Tables plugin](https://github.com/pistacchio/obsidian-enhanced-tables).
 
-This plugin is an updated and extended version of **Enhanced Tables** by [pistacchio](https://github.com/pistacchio). Their original work was foundational, and this project would not exist without it—huge thanks to them!
+This plugin is an updated and extended version of **Enhanced Tables** by [pistacchio](https://github.com/pistacchio). Their original work was foundational, and this project would not exist without it; Huge thanks to them!
 
 ---
 
